@@ -1,0 +1,17 @@
+name: deforestation-detection
+channels:
+  - defaults
+dependencies:
+  - python=3.11
+  - numpy
+  - pandas
+  - scikit-learn
+  - matplotlib
+  - seaborn
+  - jupyter
+  - ipykernel
+  - pytorch
+  - torchvision
+  - pip
+  - pip:
+      - shapely
