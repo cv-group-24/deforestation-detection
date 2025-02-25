@@ -1,0 +1,5 @@
+{
+  "spatial_augmentation": "affine",
+  "pixel_augmentation": "all",
+  "resize": "small"
+}
