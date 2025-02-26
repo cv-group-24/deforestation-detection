@@ -140,25 +140,40 @@ def get_mask(sample_path, label, debug=False):
             print("WARNING: No valid polygon was drawn!")
             
         # Create debug visualization
-        plt.figure(figsize=(12, 4))
-        plt.subplot(131)
+        plt.figure(figsize=(16, 4))  # Made wider to accommodate 4 subplots
+        
+        plt.subplot(141)
         plt.imshow(rgb_image)
         plt.title("Original Image")
         
-        plt.subplot(132)
+        plt.subplot(142)
         plt.imshow(mask_bool, cmap='gray')
         plt.title("Generated Mask")
         
-        plt.subplot(133)
+        plt.subplot(143)
         masked_img = rgb_image.copy()
         masked_img[~mask_bool] = 0
         plt.imshow(masked_img)
         plt.title("Masked Image")
+
+        # New subplot showing outline
+        plt.subplot(144)
+        # Show original image first
+        plt.imshow(rgb_image)
+        # Create outline by subtracting eroded mask from original mask
+        from scipy.ndimage import binary_erosion
+        outline = mask_bool.astype(np.uint8) - binary_erosion(mask_bool).astype(np.uint8)
+        # instantiate a new image that is the rgb_image but is white where outline = 1
+        image_to_show = rgb_image.copy()
+        image_to_show[outline == 1] = [255, 255, 255]
+        
+        plt.imshow(image_to_show)
+        plt.title("Outline on Image")
         
         plt.tight_layout()
         plt.show()
     
     return mask_bool
 
-label = INDONESIA_ALL_LABELS.index('Other')
-mask = get_mask('-1.604000236497884_113.603870354428', label, debug=True)
+label = INDONESIA_ALL_LABELS.index('Timber plantation')
+mask = get_mask('1.2673855496545907_118.13648785567229', label, debug=True)
