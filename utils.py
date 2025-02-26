@@ -175,5 +175,5 @@ def get_mask(sample_path, label, debug=False):
     
     return mask_bool
 
-label = INDONESIA_ALL_LABELS.index('Timber plantation')
-mask = get_mask('1.2673855496545907_118.13648785567229', label, debug=True)
+# label = INDONESIA_ALL_LABELS.index('Timber plantation')
+# mask = get_mask('1.2673855496545907_118.13648785567229', label, debug=True)

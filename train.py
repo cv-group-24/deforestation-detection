@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 from PIL import Image
+from utils import get_mask, FORESTNET_DIR, LABEL_IGNORE_VALUE, INDONESIA_ALL_LABELS
 
 import torch
 import torch.nn as nn
@@ -65,7 +66,7 @@ train_df = balanced_train_df
 # This class implements the function __getitem__ which means it can be passed into the DataLoader class from pytorch 
 # which makes the batch processing much more seamless.
 class ForestNetDataset(Dataset):
-    def __init__(self, df, dataset_path, transform=None, label_map=None):
+    def __init__(self, df, dataset_path, transform=None, label_map=None, use_masks=True):
         """
         Args:
             df (pd.DataFrame): DataFrame containing the image paths and labels.
@@ -77,6 +78,7 @@ class ForestNetDataset(Dataset):
         self.dataset_path = dataset_path
         self.transform = transform
         self.label_map = label_map
+        self.use_masks = use_masks
 
     def __len__(self):
         return len(self.df)
@@ -88,6 +90,26 @@ class ForestNetDataset(Dataset):
             image_path = os.path.join(self.dataset_path, image_rel_path)
             # Debug: print the image_path to see if it looks correct
             image = Image.open(image_path).convert("RGB")
+
+            # Apply masking if enabled
+            if self.use_masks:
+                # Get the example path from the relative path
+                example_path = row["example_path"].split('/')[-1]
+                label_value = self.label_map[row["merged_label"]] if self.label_map else 1
+                
+                # Import get_mask function if not already imported
+                mask_bool = get_mask(example_path, label_value)
+                
+                # Convert PIL image to numpy array
+                image_np = np.array(image)
+                
+                # Apply mask - set pixels outside the mask to black
+                masked_image_np = image_np.copy()
+                masked_image_np[~mask_bool] = 0
+                
+                # Convert back to PIL image
+                image = Image.fromarray(masked_image_np)
+
             if self.transform:
                 image = self.transform(image)
             label = row["merged_label"]
@@ -112,10 +134,13 @@ transform = transforms.Compose([
                          std=[0.229, 0.224, 0.225])
 ])
 
+
+use_masking = True
+
 # --- Create Datasets and DataLoaders ---
-train_dataset = ForestNetDataset(train_df, dataset_path, transform=transform, label_map=label_to_index)
-test_dataset = ForestNetDataset(test_df, dataset_path, transform=transform, label_map=label_to_index)
-val_dataset = ForestNetDataset(val_df, dataset_path, transform=transform, label_map=label_to_index)
+train_dataset = ForestNetDataset(train_df, dataset_path, transform=transform, label_map=label_to_index, use_masks=use_masking)
+test_dataset = ForestNetDataset(test_df, dataset_path, transform=transform, label_map=label_to_index, use_masks=use_masking)
+val_dataset = ForestNetDataset(val_df, dataset_path, transform=transform, label_map=label_to_index, use_masks=use_masking)
 
 
 batch_size = 32
@@ -246,7 +271,7 @@ epochs_without_improvement = 1
 best_model_state = None  # Will hold the best model weights
 
 # Training and Evaluation Loop
-num_epochs = 100
+num_epochs = 1
 training_losses = []
 validation_losses = []
 test_losses = []
