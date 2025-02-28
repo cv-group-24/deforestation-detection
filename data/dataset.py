@@ -1,44 +1,106 @@
 import os
-import pickle
-from PIL import Image, ImageDraw, ImageEnhance
 import numpy as np
+from PIL import Image, ImageDraw
+
+from torch.utils.data import Dataset
+from transforms import get_transforms
+
+import pickle
 import matplotlib.pyplot as plt
 
-FORESTNET_DIR = 'C:\\Users\\chris\\Documents\\DSAIT\\CV - Q3\\deforestation-detection\data\\deep\\downloads\\ForestNetDataset'
-LABEL_IGNORE_VALUE = 255
+class ForestNetDataset(Dataset):
+    def __init__(self,
+                 df,
+                 dataset_path,
+                 transform=None,
+                 label_map=None,
+                 spatial_augmentation="none",
+                 pixel_augmentation="none",
+                 resize="none",
+                 is_training=False,
+                 use_landsat=False,
+                 use_masks=False):
+        """
+        Args:
+            df (pd.DataFrame): DataFrame containing the image paths and labels.
+            dataset_path (str): The base directory for the images.
+            transform (callable, optional): A function/transform to apply to the images.
+            label_map (dict, optional): Mapping from label names to integers.
+        """
+        self.df = df
+        self.dataset_path = dataset_path
+        self.transform = transform
+        self.label_map = label_map
 
-INDONESIA_ALL_LABELS = [
-    'Oil palm plantation',
-    'Timber plantation',
-    'Other large-scale plantations',
-    'Grassland shrubland',
-    'Small-scale agriculture',
-    'Small-scale mixed plantation',
-    'Small-scale oil palm plantation',
-    'Mining',
-    'Fish pond',
-    'Logging',
-    'Secondary forest',
-    'Other',
-    '?', #AD
-    'Rubber plantation', #AD
-    'Timber sales', #AD
-    'Fruit plantation', #AD
-    'Wildfire', #AD
-    'Small-scale cassava plantation', #AD
-    'Small-scale maize plantation', #AD
-    'Small-scale other plantation', #AD
-    'Infrastructure', #AD
-    'Hunting', #AD
-    'Selective logging'] #AD
+        self.spatial_augmentation = spatial_augmentation
+        self.pixel_augmentation = pixel_augmentation
+        self.resize = resize
+        self.is_training = is_training
+        self.use_landsat = use_landsat
 
-def get_mask(sample_path, label, debug=False):
+        self.use_masks = use_masks
+
+        # Get the combined transformations
+        self.augmentations = get_transforms(
+            resize=self.resize,
+            spatial_augmentation=self.spatial_augmentation,
+            pixel_augmentation=self.pixel_augmentation,
+            is_training=self.is_training,
+            use_landsat=self.use_landsat
+        )
+
+    def __len__(self):
+        return len(self.df)
+
+    def __getitem__(self, idx):
+        try:
+            row = self.df.iloc[idx]
+            image_rel_path = row["example_path"] + "/images/visible/composite.png"
+            image_path = os.path.join(self.dataset_path, image_rel_path)
+            # Debug: print the image_path to see if it looks correct
+            image = Image.open(image_path).convert("RGB")
+
+            # Apply masking if enabled
+            if self.use_masks:
+                sample_path = os.path.join(self.dataset_path, row["example_path"])
+                label_value = self.label_map[row["merged_label"]] if self.label_map else 1
+                
+                # Import get_mask function if not already imported
+                mask_bool = get_mask(image_path, sample_path, label_value)
+                
+                # Convert PIL image to numpy array
+                image_np = np.array(image)
+                
+                # Apply mask - set pixels outside the mask to black
+                masked_image_np = image_np.copy()
+                masked_image_np[~mask_bool] = 0
+                
+                # Convert back to PIL image
+                image = Image.fromarray(masked_image_np)
+
+            # Apply augmentation transformations if in training mode
+            if self.is_training:
+                for augmentation in self.augmentations:
+                    image = augmentation(image)
+
+            if self.transform:
+                image = self.transform(image)
+
+            label = row["merged_label"]
+            if self.label_map is not None:
+                label = self.label_map[label]
+
+            return image, label
+        except Exception as e:
+            print(f"Error loading image at index {idx} from path {image_path}: {e}")
+            raise e
+        
+
+def get_mask(im_path, sample_path, label, debug=False):
     """
     Generate a mask with debugging information
     """
-    sample_dir = os.path.join(FORESTNET_DIR, 'examples', sample_path)
-    
-    im_path = os.path.join(sample_dir, 'images/visible/composite.png')
+
     pil_image = Image.open(im_path).convert('RGB')
     rgb_image = np.array(pil_image)
     height, width = rgb_image.shape[:2]
@@ -48,7 +110,7 @@ def get_mask(sample_path, label, debug=False):
     
     polygon = None
     try:
-        with open(os.path.join(sample_dir, 'forest_loss_region.pkl'), 'rb') as f:
+        with open(os.path.join(sample_path, 'forest_loss_region.pkl'), 'rb') as f:
             polygon = pickle.load(f)
             if debug:
                 print(f"Polygon type: {polygon.geom_type}")
@@ -85,7 +147,7 @@ def get_mask(sample_path, label, debug=False):
         print(f"Degree spans: lon={deg_lon}, lat={deg_lat}")
     
     # Create a blank mask
-    mask = Image.new('L', (width, height), LABEL_IGNORE_VALUE)
+    mask = Image.new('L', (width, height), 255)
     draw = ImageDraw.Draw(mask)
     
     # Variable to track if any polygon was drawn
@@ -96,7 +158,7 @@ def get_mask(sample_path, label, debug=False):
         if polygon.geom_type == 'Polygon':
             coords = np.array(polygon.exterior.coords)
             draw.polygon([tuple(coord) for coord in coords],
-                     outline=label, fill=label)
+                    outline=label, fill=label)
             any_polygon_drawn = True
 
         elif hasattr(polygon, 'geoms'):
@@ -105,7 +167,7 @@ def get_mask(sample_path, label, debug=False):
                 coords = np.array(poly.exterior.coords)
                 
                 draw.polygon([tuple(coord) for coord in coords],
-                     outline=label, fill=label)
+                    outline=label, fill=label)
                 any_polygon_drawn = True
 
     except Exception as e:
@@ -124,7 +186,7 @@ def get_mask(sample_path, label, debug=False):
     mask_np = np.array(mask)
     
     # Set ignored values to 0
-    mask_np[mask_np == LABEL_IGNORE_VALUE] = 0
+    mask_np[mask_np == 255] = 0
     
     # Make sure mask is boolean
     mask_bool = mask_np.astype(bool)
@@ -174,6 +236,3 @@ def get_mask(sample_path, label, debug=False):
         plt.show()
     
     return mask_bool
-
-# label = INDONESIA_ALL_LABELS.index('Timber plantation')
-# mask = get_mask('1.2673855496545907_118.13648785567229', label, debug=True)
