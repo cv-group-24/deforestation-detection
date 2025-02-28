@@ -22,7 +22,6 @@ def evaluate_model(model, data_loader, criterion, device):
     
     with torch.no_grad():
         for images, labels in data_loader:
-            print(labels)
             images = images.to(device)
             labels = labels.to(device)
             outputs = model(images)
