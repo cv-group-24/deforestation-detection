@@ -4,7 +4,7 @@ import os
 
 from data.dataset import ForestNetDataset
 from torchvision import transforms
-from transforms import get_transforms
+from data.transforms import get_transforms
 
 def create_data_loaders(config):
     """

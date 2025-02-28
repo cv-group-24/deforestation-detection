@@ -3,7 +3,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 from torch.utils.data import Dataset
-from transforms import get_transforms
+from data.transforms import get_transforms
 
 import pickle
 import matplotlib.pyplot as plt
