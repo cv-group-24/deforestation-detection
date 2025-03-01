@@ -115,13 +115,13 @@ def main():
             epochs_without_improvement = 0
             best_model_state = copy.deepcopy(model.state_dict())
             
-            if not os.path.exists("checkpoints"):
-                    os.makedirs("checkpoints")
+            if not os.path.exists("outputs"):
+                    os.makedirs("outputs")
             
             # Save best model
             save_checkpoint(
                 model, optimizer, epoch, best_val_loss,
-                os.path.join("checkpoints", "best_model.pth")
+                os.path.join("outputs", "best_model.pth")
             )
         else:
             epochs_without_improvement += 1
