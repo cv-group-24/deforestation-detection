@@ -6,7 +6,7 @@ import torch.nn as nn
 
 from config.default_config import DEFAULT_CONFIG
 from data.dataloader import create_data_loaders
-from models.cnn import get_model
+from models.helpers import get_model
 from utils.helpers import get_device, load_checkpoint
 from utils.metrics import evaluate_model
 from utils.visualization import plot_confusion_matrix

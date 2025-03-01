@@ -9,7 +9,7 @@ import torch.optim as optim
 
 from config.default_config import DEFAULT_CONFIG
 from data.dataloader import create_data_loaders
-from models.cnn import get_model
+from models.helpers import get_model
 
 from utils.helpers import set_seed, get_device, save_checkpoint
 from utils.metrics import evaluate_model

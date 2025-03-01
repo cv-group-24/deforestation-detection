@@ -98,22 +98,3 @@ class EnhancedCNN(nn.Module):
         x = x.view(x.size(0), -1)      # Flatten to (batch_size, 256)
         x = self.classifier(x)
         return x
-
-def get_model(model_type, num_classes):
-    """
-    Factory function to get a model.
-    
-    Args:
-        model_type: Type of model ('SimpleCNN' or 'EnhancedCNN')
-        num_classes: Number of output classes
-        dropout_rate: Dropout rate
-        
-    Returns:
-        torch.nn.Module: The model
-    """
-    if model_type == "SimpleCNN":
-        return SimpleCNN(num_classes)
-    elif model_type == "EnhancedCNN":
-        return EnhancedCNN(num_classes)
-    else:
-        raise ValueError(f"Unknown model type: {model_type}")
