@@ -1,7 +1,7 @@
 # Default configuration settings
 DEFAULT_CONFIG = {
     "data": {
-        "dataset_path": "data/raw/ForestnetDataset",
+        "dataset_path": r"C:\Users\yaren\OneDrive\Desktop\TU Delft CSE\Masters\CV\deep\downloads\ForestNetDataset",
         "batch_size": 32,
         "num_workers": 0,
         "use_masking": True,
@@ -19,8 +19,8 @@ DEFAULT_CONFIG = {
         "dropout_rate": 0.5
     },
     "transforms": {
-        "resize": "none", ## or 'small'
-        "spatial_augmentation": "none", ## or 'affine'
-        "pixel_augmentation": "none" ## or 'all'
+        "resize": "small", ## or 'small'
+        "spatial_augmentation": "affine", ## or 'affine'
+        "pixel_augmentation": "all" ## or 'all'
     }
 }

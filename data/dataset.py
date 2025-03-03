@@ -78,12 +78,35 @@ class ForestNetDataset(Dataset):
                 # Convert back to PIL image
                 image = Image.fromarray(masked_image_np)
 
+            # Convert PIL image to numpy array before augmentation
+            image_np = np.array(image)
+
             # Apply augmentation transformations if in training mode
             if self.is_training:
                 for augmentation in self.augmentations:
-                    image = augmentation(image)
 
+                    plt.imshow(image_np)
+                    plt.show()
+
+                    if image_np.ndim == 3:  # Shape (H, W, C)
+                        image_np = np.expand_dims(image_np, axis=0)  # Make it (1, H, W, C)
+
+                    augmented = augmentation(images=image_np)
+                    if isinstance(augmented, dict):
+                        image_np = augmented['images'][0]
+                    elif isinstance(augmented, list):
+                        image_np = augmented[0]
+                    elif isinstance(augmented, np.ndarray):
+                        image_np = augmented
+
+                    if image_np.ndim == 4:
+                        image_np = image_np.squeeze(axis=0)
+
+
+
+            # Convert back to PIL image after augmentation if needed
             if self.transform:
+                image = Image.fromarray(image_np)
                 image = self.transform(image)
 
             label = row["merged_label"]
