@@ -85,8 +85,8 @@ class ForestNetDataset(Dataset):
             if self.is_training:
                 for augmentation in self.augmentations:
 
-                    plt.imshow(image_np)
-                    plt.show()
+                    # plt.imshow(image_np)
+                    # plt.show()
 
                     if image_np.ndim == 3:  # Shape (H, W, C)
                         image_np = np.expand_dims(image_np, axis=0)  # Make it (1, H, W, C)
