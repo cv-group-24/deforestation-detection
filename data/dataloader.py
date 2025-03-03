@@ -41,16 +41,13 @@ def create_data_loaders(config):
     # Apply class balancing if enabled
     if config["data"].get("balance_classes", True):
         train_df = balance_classes(train_df)
-    
-    ## TODO, think about if this is the right place for this, also seems weird to me that a necessary
-    ## preprocessing is labelled as a transform. should discuss this
+
     transform = transforms.Compose([
         transforms.Resize((322, 322)),
         transforms.ToTensor(),
 
         # TODO: Look into calculating these values for our dataset. It probably has a lot more green than other
-        # datasets.
-        # These normalization values are typical for natural images.
+        # datasets. These normalization values are typical for natural images.
         transforms.Normalize(mean=[0.485, 0.456, 0.406],
                             std=[0.229, 0.224, 0.225])
     ])
@@ -61,7 +58,7 @@ def create_data_loaders(config):
         spatial_augmentation=config["transforms"]["spatial_augmentation"],
         pixel_augmentation=config["transforms"]["pixel_augmentation"],
         resize=config["transforms"]["resize"],
-        is_training=True, ## TODO, change to true after figuring out why it breaks
+        is_training=True,
         label_map=label_to_index,
         use_masks=config["data"]["use_masking"]
     )
