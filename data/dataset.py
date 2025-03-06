@@ -289,12 +289,12 @@ class ImageFeatureHandler(BaseFeatureHandler):
 
         rgb_img = self._get_image(image_path)
         ir_img = self._get_ir(image_path)
-        srtm_img = self._get_srtm_img(aux_path)
+        srtm_img = self._get_srtm(aux_path)
         ndvi_img = self._get_ndvi(rgb_img, ir_img)[..., np.newaxis]
         gfc_gain_img = self._get_gfc_img(aux_path)
         #gfc_cover_img = self._get_gfc_img(aux_path, GFC_COVER_BAND) #AD: modified
         
-        mask = self._get_mask(sample_path)
+        mask = self._get_mask(sample_path, image_path)
               
         if feature_scale:
             # Scale to [0-1] without re-scaling.
@@ -329,27 +329,32 @@ class ImageFeatureHandler(BaseFeatureHandler):
     
     def _get_ir(self, im_path, feature_scale=False):
         ir_path = im_path.replace('visible', 'infrared')
-        if 'small_composite' in im_path or 'full_composite' in im_path:
-            ir_path += '.npy'
-        else:
-            #ir_path = ir_path.replace('png', 'npy') #AD
-            ir_name = str(os.path.split(ir_path)[1][0:4]) + '_ir_0.npy' #AD
-            ir_path = os.path.join(os.path.dirname(ir_path), ir_name) #AD
+        ## replace .png with .npy
+        ir_path = ir_path.replace('png', 'npy')
+        # if 'small_composite' in im_path or 'full_composite' in im_path:
+        #     ir_path += '.npy'
+        # else:
+        #     #ir_path = ir_path.replace('png', 'npy') #AD
+        #     ir_name = str(os.path.split(ir_path)[1][0:4]) + '_ir_0.npy' #AD
+        #     ir_path = os.path.join(os.path.dirname(ir_path), ir_name) #AD
+        
         ir = np.load(ir_path).astype(np.uint8)
         return ir
     
-    def _get_gfc_img(self, aux_path, band_name):
-        gfc_img = np.load(os.path.join(aux_path, f'{band_name}.npy'), allow_pickle=True )[0] #AD
+    def _get_gfc_img(self, aux_path):
+        ## TODO: why the hell was it band_name.npy? i'm guessing we still have info from that somewhere
+        #gfc_img = np.load(os.path.join(aux_path, f'{band_name}.npy'), allow_pickle=True )[0] #AD
+        gfc_img = np.load(os.path.join(aux_path, 'gfc.npy'), allow_pickle=True)[0]
         return gfc_img         
-                
-    def _get_srtm_img(self, aux_path):
-        srtm_img = np.stack([self._get_srtm(aux_path, band) for band in self.SRTM_BANDS], axis = 2) #AD: remove axis = 2
-        return srtm_img 
     
-    def _get_srtm(self, aux_path, srtm_band):
-        srtm_unscaled = np.load(os.path.join(aux_path, f'{srtm_band}.npy'))
-        srtm_min, srtm_max = self.SRTM_SCALING[srtm_band]
-        srtm_scaled = self._feature_scale(srtm_unscaled, srtm_min, srtm_max)
+    def _get_srtm(self, aux_path):
+        srtm_unscaled = np.load(os.path.join(aux_path, f'srtm.npy'))
+
+        ##TODO: figure out what the hell is going on here, what are the bands?
+
+        # srtm_min, srtm_max = self.SRTM_SCALING[srtm_band]
+        # srtm_scaled = self._feature_scale(srtm_unscaled, srtm_min, srtm_max)
+        srtm_scaled = srtm_unscaled
         return srtm_scaled 
 
     def _get_ndvi(self, rgb_image, ir_image):
@@ -367,12 +372,12 @@ class ImageFeatureHandler(BaseFeatureHandler):
         return ndvi_scaled  
         
             
-    def _get_mask(self, sample_path, debug=False):
+    def _get_mask(self, sample_path, image_path, debug=False):
         """
         Generate a mask with debugging information
         """
 
-        pil_image = Image.open(self.image_path).convert('RGB')
+        pil_image = Image.open(image_path).convert('RGB')
         rgb_image = np.array(pil_image)
         height, width = rgb_image.shape[:2]
         
@@ -523,8 +528,9 @@ if __name__ == "__main__":
 
     ## test the _get_constant_features method
     constant_features = constant_handler._get_constant_features(row)
-    print(constant_features)
+    print(f'Constant Features: {constant_features}')
 
     ## test the _get_image_features method
     image_features, mask = image_handler._get_image_features(row)
+    print(f'Image Features: {image_features}')
 
