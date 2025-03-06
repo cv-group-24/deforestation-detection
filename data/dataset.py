@@ -3,7 +3,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageEnhance
 
 from torch.utils.data import Dataset
-from data.transforms import get_transforms
+# from data.transforms import get_transforms
 
 from geopy import distance
 
@@ -43,14 +43,15 @@ class ForestNetDataset(Dataset):
 
         self.use_masks = use_masks
 
-        # Get the combined transformations
-        self.augmentations = get_transforms(
-            resize=self.resize,
-            spatial_augmentation=self.spatial_augmentation,
-            pixel_augmentation=self.pixel_augmentation,
-            is_training=self.is_training,
-            use_landsat=self.use_landsat
-        )
+        # # Get the combined transformations
+        # self.augmentations = get_transforms(
+        #     resize=self.resize,
+        #     spatial_augmentation=self.spatial_augmentation,
+        #     pixel_augmentation=self.pixel_augmentation,
+        #     is_training=self.is_training,
+        #     use_landsat=self.use_landsat
+        # )
+        self.augmentations = None
 
     def __len__(self):
         return len(self.df)
@@ -166,7 +167,6 @@ class ConstantFeatureHandler(BaseFeatureHandler):
 
     def __init__(self, dataset_path):
         self.dataset_path = dataset_path
-        self.aux_path = os.path.join(dataset_path, "auxiliary")
 
         ## Constants
         self.OSM_SCALING = {
@@ -174,7 +174,7 @@ class ConstantFeatureHandler(BaseFeatureHandler):
             'street': (0.00327, 513.49534)
         }
 
-    def get_features(self, row):
+    def _get_constant_features(self, row):
         """
         Get constant features for a given row in the dataset.
         
@@ -186,29 +186,37 @@ class ConstantFeatureHandler(BaseFeatureHandler):
         """
         lat = row["lat"]
         lon = row["lon"]
+
+        sample = row["example_path"]
+        sample_path = os.path.join(self.dataset_path, sample)
+        aux_path = os.path.join(sample_path, "auxiliary")
         
         features = {}
         
         # Get constant features
-        features.update(self._get_peat_features())
-        features.update(self._get_osm_features(lat, lon))
-        features.update(self._get_ncep_features())
+        features.update(self._get_peat_features(aux_path))
+        features.update(self._get_osm_features(aux_path, lat, lon))
+        features.update(self._get_ncep_features(aux_path))
         
         return features
 
-    def _get_peat_features(self):
-        peat_path = os.path.join(self.aux_path, 'peat.json')
+    def _get_peat_features(self, aux_path):
+        peat_path = os.path.join(aux_path, 'peat.json')
         peat = json.loads(open(peat_path).read())['peat']
         peat_val = 1. if peat else 0.
         return {'peat': peat_val}
     
     # Using geodesic distance provided by geopy
     # See: https://geopy.readthedocs.io/en/stable/#module-geopy.distance
-    def _get_osm_features(self, lat, lon, feature_scale=False):
-        street_path = os.path.join(self.aux_path, 'closest_street.json')
-        street = json.loads(open(street_path).read())
-        city_path = os.path.join(self.aux_path, 'closest_city.json')        
-        city = json.loads(open(city_path).read())
+    def _get_osm_features(self, aux_path, lat, lon, feature_scale=False):
+        # street_path = os.path.join(aux_path, 'closest_street.json')
+        # street = json.loads(open(street_path).read())
+        # city_path = os.path.join(aux_path, 'closest_city.json')        
+        # city = json.loads(open(city_path).read())
+        osm_path = os.path.join(aux_path, 'osm.json')
+        osm = json.loads(open(osm_path).read())
+        street = osm['closest_street']
+        city = osm['closest_city']
         street_dist = distance.distance((lat, lon),
                                         (street.get('lat'), street.get('lon'))).km                                  
         city_dist = distance.distance((lat, lon),
@@ -244,7 +252,9 @@ class ConstantFeatureHandler(BaseFeatureHandler):
         #         feat = self._feature_scale(feat, min_scale, max_scale, False)
             
         #     features[feat_name] = feat
-        features = None
+        features = {
+            'ncep': None
+        }
         
         return features
     
@@ -253,9 +263,6 @@ class ImageFeatureHandler(BaseFeatureHandler):
 
     def __init__(self, dataset_path):
         self.dataset_path = dataset_path
-        self.aux_path = os.path.join(dataset_path, "auxiliary")
-        self.images_path = os.path.join(dataset_path, "images")
-        self.image_path = os.path.join(self.images_path, "visible", "composite.png")
 
         ## Constants 
         self.TREE_COVER_SCALING = (0.0, 100.0)
@@ -272,15 +279,22 @@ class ImageFeatureHandler(BaseFeatureHandler):
             'aspect': (-17954.0, 18000.0)
         }
 
-    def _get_image_features(self, feature_scale=False):
-        rgb_img = self._get_image()
-        ir_img = self._get_ir()
-        srtm_img = self._get_srtm_img()
+    def _get_image_features(self, row, feature_scale=False):
+
+        sample = row["example_path"]
+        sample_path = os.path.join(self.dataset_path, sample)
+        aux_path = os.path.join(sample_path, "auxiliary")
+        images_path = os.path.join(sample_path, "images")
+        image_path = os.path.join(images_path, "visible", "composite.png")
+
+        rgb_img = self._get_image(image_path)
+        ir_img = self._get_ir(image_path)
+        srtm_img = self._get_srtm_img(aux_path)
         ndvi_img = self._get_ndvi(rgb_img, ir_img)[..., np.newaxis]
-        gfc_gain_img = self._get_gfc_img()
+        gfc_gain_img = self._get_gfc_img(aux_path)
         #gfc_cover_img = self._get_gfc_img(aux_path, GFC_COVER_BAND) #AD: modified
         
-        mask = self._get_mask()
+        mask = self._get_mask(sample_path)
               
         if feature_scale:
             # Scale to [0-1] without re-scaling.
@@ -309,7 +323,7 @@ class ImageFeatureHandler(BaseFeatureHandler):
         image = np.array(pil_image)
         
         if feature_scale:
-            image = self.feature_scale()
+            image = self._feature_scale()
         
         return image
     
@@ -328,12 +342,12 @@ class ImageFeatureHandler(BaseFeatureHandler):
         gfc_img = np.load(os.path.join(aux_path, f'{band_name}.npy'), allow_pickle=True )[0] #AD
         return gfc_img         
                 
-    def _get_srtm_img(self, index):
-        srtm_img = np.stack([self._get_srtm(band) for band in self.SRTM_BANDS], axis = 2) #AD: remove axis = 2
+    def _get_srtm_img(self, aux_path):
+        srtm_img = np.stack([self._get_srtm(aux_path, band) for band in self.SRTM_BANDS], axis = 2) #AD: remove axis = 2
         return srtm_img 
     
-    def _get_srtm(self, srtm_band):
-        srtm_unscaled = np.load(os.path.join(self.aux_path, f'{srtm_band}.npy'))
+    def _get_srtm(self, aux_path, srtm_band):
+        srtm_unscaled = np.load(os.path.join(aux_path, f'{srtm_band}.npy'))
         srtm_min, srtm_max = self.SRTM_SCALING[srtm_band]
         srtm_scaled = self._feature_scale(srtm_unscaled, srtm_min, srtm_max)
         return srtm_scaled 
@@ -353,7 +367,7 @@ class ImageFeatureHandler(BaseFeatureHandler):
         return ndvi_scaled  
         
             
-    def _get_mask(self, debug=False):
+    def _get_mask(self, sample_path, debug=False):
         """
         Generate a mask with debugging information
         """
@@ -367,7 +381,7 @@ class ImageFeatureHandler(BaseFeatureHandler):
         
         polygon = None
         try:
-            with open(os.path.join(self.dataset_path, 'forest_loss_region.pkl'), 'rb') as f:
+            with open(os.path.join(sample_path, 'forest_loss_region.pkl'), 'rb') as f:
                 polygon = pickle.load(f)
                 if debug:
                     print(f"Polygon type: {polygon.geom_type}")
@@ -494,3 +508,23 @@ class ImageFeatureHandler(BaseFeatureHandler):
             plt.show()
         
         return mask_bool
+    
+if __name__ == "__main__":
+    ## instantiate the handlers so that I can test them
+    dataset_path = r"C:\Users\chris\Documents\DSAIT\CV - Q3\deforestation-detection\data\raw\ForestNetDataset"
+    image_handler = ImageFeatureHandler(dataset_path)
+    constant_handler = ConstantFeatureHandler(dataset_path)
+
+    row = {
+        "example_path": "examples/4.430849118860583_96.1016343478138",
+        "lat": 4.430849118860583,
+        "lon": 96.1016343478138
+    }
+
+    ## test the _get_constant_features method
+    constant_features = constant_handler._get_constant_features(row)
+    print(constant_features)
+
+    ## test the _get_image_features method
+    image_features, mask = image_handler._get_image_features(row)
+
