@@ -1,4 +1,4 @@
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, ConcatDataset
 import pandas as pd
 import os
 
@@ -25,6 +25,7 @@ def create_data_loaders(config):
     # Load DataFrames and process them
     test_df = pd.read_csv(test_path)
     train_df = pd.read_csv(train_path)
+    train_df_augment = pd.read_csv(train_path)
     val_df = pd.read_csv(validation_path)
     
     if config["data"].get("sample_data", False):
@@ -32,6 +33,7 @@ def create_data_loaders(config):
         sample_size = config["data"].get("sample_size", 10)
         test_df = test_df.sample(n=sample_size, random_state=seed)
         train_df = train_df.sample(n=sample_size, random_state=seed)
+        train_df_augment = train_df_augment.sample(n=sample_size, random_state=seed)
         val_df = val_df.sample(n=sample_size, random_state=seed)
     
     # Create label mapping
@@ -41,20 +43,26 @@ def create_data_loaders(config):
     # Apply class balancing if enabled
     if config["data"].get("balance_classes", True):
         train_df = balance_classes(train_df)
+        train_df_augment = balance_classes(train_df_augment)
 
     transform = transforms.Compose([
         transforms.Resize((322, 322)),
         transforms.ToTensor(),
 
-        # TODO: Look into calculating these values for our dataset. It probably has a lot more green than other
-        # datasets. These normalization values are typical for natural images.
+        # TODO: Look into calculating these values for our dataset.
         transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                            std=[0.229, 0.224, 0.225])
+                             std=[0.229, 0.224, 0.225])
     ])
     
     # Create datasets
     train_dataset = ForestNetDataset(
         train_df, dataset_path, transform=transform,
+        is_training=False, label_map=label_to_index,
+        use_masks=config["data"]["use_masking"]
+    )
+
+    train_dataset_augmented = ForestNetDataset(
+        train_df_augment, dataset_path, transform=transform,
         spatial_augmentation=config["transforms"]["spatial_augmentation"],
         pixel_augmentation=config["transforms"]["pixel_augmentation"],
         resize=config["transforms"]["resize"],
@@ -62,6 +70,8 @@ def create_data_loaders(config):
         label_map=label_to_index,
         use_masks=config["data"]["use_masking"]
     )
+
+    combined_train_dataset = ConcatDataset([train_dataset, train_dataset_augmented])
     
     val_dataset = ForestNetDataset(
         val_df, dataset_path, transform=transform,
@@ -77,7 +87,7 @@ def create_data_loaders(config):
     
     # Create dataloaders
     train_loader = DataLoader(
-        train_dataset, 
+        combined_train_dataset,
         batch_size=config["data"]["batch_size"], 
         shuffle=True, 
         num_workers=config["data"]["num_workers"]

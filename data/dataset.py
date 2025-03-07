@@ -117,7 +117,29 @@ class ForestNetDataset(Dataset):
         except Exception as e:
             print(f"Error loading image at index {idx} from path {image_path}: {e}")
             raise e
-        
+
+class ConcatDataset(Dataset):
+    def __init__(self, original_dataset, augmented_dataset):
+        """
+        Args:
+            original_dataset (ForestNetDataset): Original dataset
+            augmented_dataset (ForestNetDataset): Augmented dataset
+        """
+        self.original_dataset = original_dataset
+        self.augmented_dataset = augmented_dataset
+
+    def __len__(self):
+        # The combined length is the sum of the lengths of both datasets
+        return len(self.original_dataset) + len(self.augmented_dataset)
+
+    def __getitem__(self, idx):
+        # Determine if we are accessing the original or augmented image
+        if idx < len(self.original_dataset):
+            return self.original_dataset[idx]  # Original image
+        else:
+            return self.augmented_dataset[idx - len(self.original_dataset)]  # Augmented image
+
+
 
 def get_mask(im_path, sample_path, label, debug=False):
     """
