@@ -28,7 +28,7 @@ def plot_losses(training_losses, validation_losses, test_losses=None, output_pat
     plt.savefig(output_path)
     plt.show()
 
-def plot_confusion_matrix(conf_matrix, class_names):
+def plot_confusion_matrix(conf_matrix, class_names, output_path='outputs/confusion_matrix.png'):
     """
     Plot confusion matrix.
     
@@ -42,7 +42,8 @@ def plot_confusion_matrix(conf_matrix, class_names):
     plt.xlabel('Predicted')
     plt.ylabel('True')
     plt.title('Confusion Matrix')
-    plt.show()
+    plt.savefig(output_path)
+    # plt.show()
 
 def visualize_samples(dataset, class_names, num_samples=5):
     """

@@ -57,24 +57,38 @@ def main():
     # Evaluate model
     test_metrics = evaluate_model(model, test_loader, criterion, device)
     
-    # Print metrics
-    print("\nTest Metrics:")
-    print(f"  Loss: {test_metrics['loss']:.4f}")
-    print(f"  Accuracy: {test_metrics['accuracy']:.4f}")
-    
     # Print classification report
     class_report = test_metrics["classification_report"]
-    
-    print("\nClassification Report:")
-    print(class_report)
-    for class_idx, metrics in class_report.items():
-        if isinstance(class_idx, str) and class_idx.isdigit():  # Skip averages
-            label = index_to_label.get(int(class_idx), class_idx)
-            print(f"  Class {label}:")
-            print(f"    Precision: {metrics['precision']:.4f}")
-            print(f"    Recall: {metrics['recall']:.4f}")
-            print(f"    F1-Score: {metrics['f1-score']:.4f}")
-            print(f"    Support: {metrics['support']}")
+
+    with open("outputs/classification_report.txt", "w") as f:
+        f.write("Test Metrics:\n")
+        f.write(f"  Loss: {test_metrics['loss']:.4f}\n")
+        f.write(f"  Accuracy: {test_metrics['accuracy']:.4f}\n")
+
+        f.write("\nClassification Report:\n")
+        for class_idx, metrics in class_report.items():
+            if isinstance(class_idx, str) and class_idx.isdigit():  # Skip averages
+                label = index_to_label.get(int(class_idx), class_idx)
+                f.write(f"\nClass {label}:\n")
+                f.write(f"  Precision: {metrics['precision']:.4f}\n")
+                f.write(f"  Recall: {metrics['recall']:.4f}\n")
+                f.write(f"  F1-Score: {metrics['f1-score']:.4f}\n")
+                f.write(f"  Support: {metrics['support']}\n")
+        f.write("\n")
+
+        # Write Macro Average
+        f.write("\nMacro Average:\n")
+        f.write(f"  Precision: {class_report['macro avg']['precision']:.4f}\n")
+        f.write(f"  Recall: {class_report['macro avg']['recall']:.4f}\n")
+        f.write(f"  F1-Score: {class_report['macro avg']['f1-score']:.4f}\n")
+        f.write(f"  Support: {class_report['macro avg']['support']}\n")
+
+        # Write Weighted Average
+        f.write("\nWeighted Average:\n")
+        f.write(f"  Precision: {class_report['weighted avg']['precision']:.4f}\n")
+        f.write(f"  Recall: {class_report['weighted avg']['recall']:.4f}\n")
+        f.write(f"  F1-Score: {class_report['weighted avg']['f1-score']:.4f}\n")
+        f.write(f"  Support: {class_report['weighted avg']['support']}\n")
     
     # Plot confusion matrix
     class_names = [index_to_label[i] for i in range(num_classes)]
