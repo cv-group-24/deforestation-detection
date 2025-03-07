@@ -70,8 +70,10 @@ def create_data_loaders(config):
         label_map=label_to_index,
         use_masks=config["data"]["use_masking"]
     )
+    print(" ---------------- Data Augmentation FINISHED ---------------- ")
 
     combined_train_dataset = ConcatDataset([train_dataset, train_dataset_augmented])
+    print(" ---------------- Dataset Concatenation FINISHED ---------------- ")
     
     val_dataset = ForestNetDataset(
         val_df, dataset_path, transform=transform,
