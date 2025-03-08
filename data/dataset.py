@@ -7,6 +7,8 @@ from data.transforms import get_transforms
 
 import pickle
 import matplotlib.pyplot as plt
+from geopy import distance
+import json
 
 class ForestNetDataset(Dataset):
     def __init__(self,
@@ -117,6 +119,37 @@ class ForestNetDataset(Dataset):
         except Exception as e:
             print(f"Error loading image at index {idx} from path {image_path}: {e}")
             raise e
+    
+    # Using geodesic distance provided by geopy
+    # See: https://geopy.readthedocs.io/en/stable/#module-geopy.distance
+    def get_osm_features(self, lat, lon, feature_scale=False):
+
+        self.aux_path = os.path.join(self.dataset_path, "auxiliary")
+
+        ## TO DO: Look into what the scaling here does / why these parameters are necessary
+        self.OSM_SCALING = {
+            'city': (0.19590, 513.49534),
+            'street': (0.00327, 513.49534)
+        }
+        
+        street_path = os.path.join(self.aux_path, 'closest_street.json')
+        street = json.loads(open(street_path).read())
+        city_path = os.path.join(self.aux_path, 'closest_city.json')        
+        city = json.loads(open(city_path).read())
+        street_dist = distance.distance((lat, lon),
+                                        (street.get('lat'), street.get('lon'))).km                                  
+        city_dist = distance.distance((lat, lon),
+                                        (city.get('lat'), city.get('lon'))).km
+                                        
+        if feature_scale:
+            street_min, street_max = self.OSM_SCALING['street']
+            street_dist = self._feature_scale(street_dist, street_min, street_max, False)
+            city_min, city_max = self.OSM_SCALING['city']
+            city_dist = self._feature_scale(city_dist, city_min, city_max, False)
+                                        
+        features = {'street_dist': street_dist,
+                    'city_dist': city_dist}        
+        return features  
 
 class ConcatDataset(Dataset):
     def __init__(self, original_dataset, augmented_dataset):
