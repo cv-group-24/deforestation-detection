@@ -127,25 +127,31 @@ class ForestNetDataset(Dataset):
         self.aux_path = os.path.join(self.dataset_path, "auxiliary")
 
         ## TO DO: Look into what the scaling here does / why these parameters are necessary
-        self.OSM_SCALING = {
+        OSM_SCALING = {
             'city': (0.19590, 513.49534),
             'street': (0.00327, 513.49534)
         }
+
+        osm_path = os.path.join(self.aux_path, 'osm.json')
+
+        # Load the combined JSON file
+        with open(osm_path, 'r') as f:
+            osm_data = json.load(f)
+
+        # Extract the street and city data
+        street = osm_data.get("closest_street", {})
+        city = osm_data.get("closest_city", {})
         
-        street_path = os.path.join(self.aux_path, 'closest_street.json')
-        street = json.loads(open(street_path).read())
-        city_path = os.path.join(self.aux_path, 'closest_city.json')        
-        city = json.loads(open(city_path).read())
         street_dist = distance.distance((lat, lon),
                                         (street.get('lat'), street.get('lon'))).km                                  
         city_dist = distance.distance((lat, lon),
                                         (city.get('lat'), city.get('lon'))).km
-                                        
-        if feature_scale:
-            street_min, street_max = self.OSM_SCALING['street']
-            street_dist = self._feature_scale(street_dist, street_min, street_max, False)
-            city_min, city_max = self.OSM_SCALING['city']
-            city_dist = self._feature_scale(city_dist, city_min, city_max, False)
+
+        # if feature_scale:
+        #     street_min, street_max = OSM_SCALING['street']
+        #     street_dist = self._feature_scale(street_dist, street_min, street_max, False)
+        #     city_min, city_max = self.OSM_SCALING['city']
+        #     city_dist = self._feature_scale(city_dist, city_min, city_max, False)
                                         
         features = {'street_dist': street_dist,
                     'city_dist': city_dist}        
