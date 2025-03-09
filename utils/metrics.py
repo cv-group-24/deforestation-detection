@@ -24,7 +24,7 @@ def evaluate_model(model, data_loader, criterion, device):
         for images, multi_modal_features,  labels in data_loader:
             images = images.to(device)
             labels = labels.to(device)
-            multi_modal_features = labels.to(multi_modal_features)
+            multi_modal_features = multi_modal_features.to(device)
             outputs = model(images, multi_modal_features)
             loss = criterion(outputs, labels)
             

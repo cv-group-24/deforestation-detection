@@ -2,7 +2,7 @@ from models.cnn import SimpleCNN, EnhancedCNN
 from models.transferlearning import ResNetTransferLearning, EfficientNetTransferLearning, DenseNetTransferLearning
 
 
-def get_model(model_type, num_classes):
+def get_model(model_type, num_classes, multi_modal_size):
     """
     Factory function to get a model.
     
@@ -19,7 +19,7 @@ def get_model(model_type, num_classes):
     if model_type == "SimpleCNN":
         return SimpleCNN(num_classes)
     elif model_type == "EnhancedCNN":
-        return EnhancedCNN(num_classes)
+        return EnhancedCNN(num_classes, multi_modal_size)
     elif model_type == "ResNetTransferLearning":
         return ResNetTransferLearning(num_classes)
     elif model_type == "EfficientNetTransferLearning":

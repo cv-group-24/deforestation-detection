@@ -68,8 +68,8 @@ class ForestNetDataset(Dataset):
             longitude = row["longitude"]
             osm_features = self.get_osm_features(latitude, longitude, feature_scale=False)
 
-            # Convert OSM features to tensor so that we can process them properly in the classifier
-            osm_tensor = torch.tensor([osm_features["street_dist"], osm_features["city_dist"]], dtype=torch.float32)
+            # Convert multi modal features to tensor so that we can process them properly in the classifier
+            multi_modal_tensor = torch.tensor([osm_features["street_dist"], osm_features["city_dist"]], dtype=torch.float32)
 
             # Apply masking if enabled
             if self.use_masks:
@@ -122,7 +122,7 @@ class ForestNetDataset(Dataset):
             if self.label_map is not None:
                 label = self.label_map[label]
 
-            return image, osm_tensor, label  # Include OSM tensor in return
+            return image, multi_modal_tensor, label  # Include OSM tensor in return
         except Exception as e:
             print(f"Error loading image at index {idx} from path {image_path}: {e}")
             raise e

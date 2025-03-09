@@ -52,7 +52,8 @@ def main():
     num_classes = len(data["label_to_index"])
     model = get_model(
         config["model"]["type"], 
-        num_classes
+        num_classes, 
+        config["model"]["multi_modal_size"]
     )
     model = model.to(device)
     
@@ -79,12 +80,13 @@ def main():
         # Training phase
         model.train()
         running_loss = 0.0
-        for images, labels in train_loader:
+        for images, multi_modal_features, labels in train_loader:
             images = images.to(device)
             labels = labels.to(device)
+            multi_modal_features = multi_modal_features.to(device)
             
             optimizer.zero_grad()
-            outputs = model(images)
+            outputs = model(images, multi_modal_features)
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
@@ -121,7 +123,7 @@ def main():
             # Save best model
             save_checkpoint(
                 model, optimizer, epoch, best_val_loss,
-                os.path.join("outputs", "best_model_yaren.pth")
+                os.path.join("outputs", "best_model.pth")
             )
         else:
             epochs_without_improvement += 1
