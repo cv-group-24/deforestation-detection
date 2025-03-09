@@ -140,7 +140,7 @@ def main():
         estimated_time_remaining = epoch_duration * remaining_epochs
         print(f"  Epoch Time: {epoch_duration:.2f}s")
         print(f"  Estimated time remaining: {estimated_time_remaining:.2f}s\n")
-        plot_losses(training_losses, validation_losses, test_losses, is_done_training=False)
+        plot_losses(training_losses, validation_losses, test_losses)
     
     # Load best model for final evaluation
     if best_model_state is not None:
@@ -154,7 +154,7 @@ def main():
     print(f"  Accuracy: {test_metrics['accuracy']:.4f}")
     
     # Plot training history
-    plot_losses(training_losses, validation_losses, test_losses, is_done_training=True)
+    plot_losses(training_losses, validation_losses, test_losses)
     
     print("Training complete!")
 

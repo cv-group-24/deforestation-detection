@@ -12,7 +12,7 @@ def plot_losses(training_losses, validation_losses, test_losses=None, output_pat
         test_losses: Optional list of test losses
     """
     epochs = range(1, len(training_losses) + 1)
-    
+
     plt.figure(figsize=(10, 6))
     plt.plot(epochs, training_losses, marker='o', linestyle='-', color='b', label='Training Loss')
     plt.plot(epochs, validation_losses, marker='s', linestyle='-', color='r', label='Validation Loss')
@@ -27,8 +27,6 @@ def plot_losses(training_losses, validation_losses, test_losses=None, output_pat
     plt.legend()
     plt.savefig(output_path)
 
-    if (is_done_training):
-        plt.show()
 
 def plot_confusion_matrix(conf_matrix, class_names, output_path='outputs/confusion_matrix.png'):
     """

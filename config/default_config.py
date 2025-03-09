@@ -9,7 +9,7 @@ DEFAULT_CONFIG = {
         "sample_size": 100
     },
     "training": {
-        "num_epochs": 20,
+        "num_epochs": 3,
         "learning_rate": 1e-4,
         "early_stopping_patience": 5,
         "seed": 42
