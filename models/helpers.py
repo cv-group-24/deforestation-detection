@@ -17,7 +17,7 @@ def get_model(model_type, num_classes, multi_modal_size):
         torch.nn.Module: The model
     """
     if model_type == "SimpleCNN":
-        return SimpleCNN(num_classes)
+        return SimpleCNN(num_classes, multi_modal_size)
     elif model_type == "EnhancedCNN":
         return EnhancedCNN(num_classes, multi_modal_size)
     elif model_type == "ResNetTransferLearning":

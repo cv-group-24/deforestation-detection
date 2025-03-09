@@ -3,7 +3,7 @@ import torch.nn as nn
 
 # CNN for size 322 by 322 ie. the max shape of the images
 class SimpleCNN(nn.Module):
-    def __init__(self, num_classes):
+    def __init__(self, num_classes, multi_modal_size):
         super(SimpleCNN, self).__init__()
         self.features = nn.Sequential(
             # Convolutional Block 1: Input 3 x 322 x 322 -> Conv -> 16 x 322 x 322, then maxpool to 16 x 161 x 161
@@ -25,18 +25,24 @@ class SimpleCNN(nn.Module):
             nn.MaxPool2d(2)
         )
         
-        self.classifier = nn.Sequential(
-            nn.Dropout(0.5),
-            nn.Linear(64 * 20 * 20, 128),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.5),
-            nn.Linear(128, num_classes)
-        )
+
+        # Fully connected layers including the multi modal data
+        self.fc1 = nn.Linear(64 * 20 * 20 + multi_modal_size, 128)  # Concatenating with multi modal features
+        self.relu = nn.ReLU(inplace=True)
+        self.dropout = nn.Dropout(0.5)
+        self.fc2 = nn.Linear(128, num_classes)
         
-    def forward(self, x):
+    def forward(self, x, multi_modal_features):
         x = self.features(x)
-        x = x.view(x.size(0), -1)  # Flatten the features for the classifier
-        x = self.classifier(x)
+        x = x.view(x.size(0), -1)  # Flatten (batch_size, 256)
+        
+        # Concatenate with muli modal features
+        x = torch.cat((x, multi_modal_features), dim=1)
+
+        x = self.fc1(x)
+        x = self.relu(x)
+        x = self.dropout(x)
+        x = self.fc2(x)
         return x
     
 class EnhancedCNN(nn.Module):
