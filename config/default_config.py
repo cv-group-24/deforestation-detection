@@ -15,7 +15,7 @@ DEFAULT_CONFIG = {
         "seed": 42
     },
     "model": {
-        "type": "ResNetTransferLearning",  # or "EnhancedCNN"
+        "type": "DenseNetTransferLearning",  # or "EnhancedCNN"
         "dropout_rate": 0.5, 
         "multi_modal_size": 2,
     },

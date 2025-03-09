@@ -23,8 +23,8 @@ def get_model(model_type, num_classes, multi_modal_size):
     elif model_type == "ResNetTransferLearning":
         return ResNetTransferLearning(num_classes, multi_modal_size)
     elif model_type == "EfficientNetTransferLearning":
-        return EfficientNetTransferLearning(num_classes)
+        return EfficientNetTransferLearning(num_classes, multi_modal_size)
     elif model_type == "DenseNetTransferLearning":
-        return DenseNetTransferLearning(num_classes)
+        return DenseNetTransferLearning(num_classes, multi_modal_size)
     else:
         raise ValueError(f"Unknown model type: {model_type}")

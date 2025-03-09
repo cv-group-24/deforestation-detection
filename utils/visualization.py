@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 
-def plot_losses(training_losses, validation_losses, test_losses=None, output_path='outputs/losses.png', is_done_training = False):
+def plot_losses(training_losses, validation_losses, test_losses=None, output_path='outputs/losses.png'):
     """
     Plot training, validation, and optionally test losses.
     
