@@ -1,22 +1,37 @@
 from torchvision import models
 import torch.nn as nn
+import torch as torch
 
 class ResNetTransferLearning(nn.Module):
-    def __init__(self, num_classes):
+    def __init__(self, num_classes, multi_modal_size):
         super(ResNetTransferLearning, self).__init__()
 
-        # Load a pre-trained ResNet model (e.g., ResNet50)
+        # Load a pre-trained ResNet model
         self.resnet = models.resnet50(pretrained=True)
 
-        # Freeze the layers of ResNet (except for the classifier)
+        # Freeze all convolutional layers
         for param in self.resnet.parameters():
             param.requires_grad = False
 
-        # Modify the final layer to match the number of classes in your dataset
-        self.resnet.fc = nn.Linear(self.resnet.fc.in_features, num_classes)
+        # Remove the final classification layer
+        in_features = self.resnet.fc.in_features
+        self.resnet.fc = nn.Identity()  # Output will be (batch_size, in_features)
 
-    def forward(self, x):
-        return self.resnet(x)
+        # New fully connected layers with multi-modal input
+        self.fc1 = nn.Linear(in_features + multi_modal_size, 128)  # Concatenating image & multi-modal features
+        self.relu = nn.ReLU(inplace=True)
+        self.dropout = nn.Dropout(0.5)
+        self.fc2 = nn.Linear(128, num_classes)
+
+    def forward(self, x, multi_modal_features):
+        x = self.resnet(x)  # Extract image features
+        x = torch.cat((x, multi_modal_features), dim=1)  # Concatenate with multi-modal features
+
+        x = self.fc1(x)
+        x = self.relu(x)
+        x = self.dropout(x)
+        x = self.fc2(x)
+        return x
 
 class EfficientNetTransferLearning(nn.Module):
     def __init__(self, num_classes):

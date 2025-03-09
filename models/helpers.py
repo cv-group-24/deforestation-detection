@@ -21,7 +21,7 @@ def get_model(model_type, num_classes, multi_modal_size):
     elif model_type == "EnhancedCNN":
         return EnhancedCNN(num_classes, multi_modal_size)
     elif model_type == "ResNetTransferLearning":
-        return ResNetTransferLearning(num_classes)
+        return ResNetTransferLearning(num_classes, multi_modal_size)
     elif model_type == "EfficientNetTransferLearning":
         return EfficientNetTransferLearning(num_classes)
     elif model_type == "DenseNetTransferLearning":
