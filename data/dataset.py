@@ -9,6 +9,7 @@ import pickle
 import matplotlib.pyplot as plt
 from geopy import distance
 import json
+import torch as torch
 
 class ForestNetDataset(Dataset):
     def __init__(self,
@@ -62,6 +63,14 @@ class ForestNetDataset(Dataset):
             # Debug: print the image_path to see if it looks correct
             image = Image.open(image_path).convert("RGB")
 
+            # get the latitude and longtidue of the image to calculase osm data
+            latitude = row["latitude"] 
+            longitude = row["longitude"]
+            osm_features = self.get_osm_features(latitude, longitude, feature_scale=False)
+
+            # Convert OSM features to tensor so that we can process them properly in the classifier
+            osm_tensor = torch.tensor([osm_features["street_dist"], osm_features["city_dist"]], dtype=torch.float32)
+
             # Apply masking if enabled
             if self.use_masks:
                 sample_path = os.path.join(self.dataset_path, row["example_path"])
@@ -104,8 +113,6 @@ class ForestNetDataset(Dataset):
                     if image_np.ndim == 4:
                         image_np = image_np.squeeze(axis=0)
 
-
-
             # Convert back to PIL image after augmentation if needed
             if self.transform:
                 image = Image.fromarray(image_np)
@@ -115,7 +122,7 @@ class ForestNetDataset(Dataset):
             if self.label_map is not None:
                 label = self.label_map[label]
 
-            return image, label
+            return image, osm_tensor, label  # Include OSM tensor in return
         except Exception as e:
             print(f"Error loading image at index {idx} from path {image_path}: {e}")
             raise e
@@ -141,7 +148,7 @@ class ForestNetDataset(Dataset):
         # Extract the street and city data
         street = osm_data.get("closest_street", {})
         city = osm_data.get("closest_city", {})
-        
+
         street_dist = distance.distance((lat, lon),
                                         (street.get('lat'), street.get('lon'))).km                                  
         city_dist = distance.distance((lat, lon),

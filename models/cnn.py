@@ -40,7 +40,7 @@ class SimpleCNN(nn.Module):
         return x
     
 class EnhancedCNN(nn.Module):
-    def __init__(self, num_classes):
+    def __init__(self, num_classes, multi_modal_size):
         super(EnhancedCNN, self).__init__()
         self.features = nn.Sequential(
             # Block 1: Input 3 x 322 x 322 -> Two conv layers -> MaxPool to 32 x 161 x 161
@@ -84,17 +84,30 @@ class EnhancedCNN(nn.Module):
         # This helps cut down the number of parameters in the classifier.
         self.global_avg_pool = nn.AdaptiveAvgPool2d((1, 1))
         
-        self.classifier = nn.Sequential(
-            nn.Dropout(0.5),
-            nn.Linear(256, 128),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.5),
-            nn.Linear(128, num_classes)
-        )
+        # self.classifier = nn.Sequential(
+        #     nn.Dropout(0.5),
+        #     nn.Linear(256, 128),
+        #     nn.ReLU(inplace=True),
+        #     nn.Dropout(0.5),
+        #     nn.Linear(128, num_classes)
+        # )
+
+        # Fully connected layers including the multi modal data
+        self.fc1 = nn.Linear(256 + multi_modal_size, 128)  # Concatenating with multi modal features
+        self.relu = nn.ReLU(inplace=True)
+        self.dropout = nn.Dropout(0.5)
+        self.fc2 = nn.Linear(128, num_classes)
         
-    def forward(self, x):
+    def forward(self, x, multi_modal_features):
         x = self.features(x)
-        x = self.global_avg_pool(x)  # Now x has shape (batch_size, 256, 1, 1)
-        x = x.view(x.size(0), -1)      # Flatten to (batch_size, 256)
-        x = self.classifier(x)
+        x = self.global_avg_pool(x)
+        x = x.view(x.size(0), -1)  # Flatten (batch_size, 256)
+        
+        # Concatenate with muli modal features
+        x = torch.cat((x, multi_modal_features), dim=1)
+
+        x = self.fc1(x)
+        x = self.relu(x)
+        x = self.dropout(x)
+        x = self.fc2(x)
         return x
