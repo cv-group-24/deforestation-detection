@@ -66,10 +66,7 @@ class ForestNetDataset(Dataset):
             # get the latitude and longtidue of the image to calculase osm data
             latitude = row["latitude"] 
             longitude = row["longitude"]
-            osm_features = self.get_osm_features(latitude, longitude, feature_scale=False)
-
-            # Convert multi modal features to tensor so that we can process them properly in the classifier
-            multi_modal_tensor = torch.tensor([osm_features["street_dist"], osm_features["city_dist"]], dtype=torch.float32)
+            multi_modal_tensor = self.get_multi_modal_features(latitude, longitude, feature_scale=False)
 
             # Apply masking if enabled
             if self.use_masks:
@@ -163,6 +160,16 @@ class ForestNetDataset(Dataset):
         features = {'street_dist': street_dist,
                     'city_dist': city_dist}        
         return features  
+    
+    def get_multi_modal_features(self, lat, long, feature_scale = False): 
+        osm_features = self.get_osm_features(lat, long, feature_scale)
+
+        # TO DO: Add all other multi modal features to the same dictionary before converting to a tensor
+        
+        # Convert multi modal features to tensor so that we can process them properly in the classifier
+        multi_modal_tensor = torch.tensor([osm_features["street_dist"], osm_features["city_dist"]], dtype=torch.float32)
+
+        return multi_modal_tensor
 
 class ConcatDataset(Dataset):
     def __init__(self, original_dataset, augmented_dataset):
