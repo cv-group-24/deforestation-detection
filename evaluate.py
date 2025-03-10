@@ -236,13 +236,13 @@ def compare_predictions(model, test_loader, metamorphic_test_loader, device, ind
 
         # Compare the predictions for the current image
         for o, a, label in zip(pred_orig, pred_aug, label_orig):
-            total_count_per_class[label.item()] += 1
+            total_count_per_class[o.item()] += 1
             if o == a:
-                same_count_per_class[label.item()] += 1
+                same_count_per_class[o.item()] += 1
             else:
-                changed_count_per_class[label.item()] += 1
+                changed_count_per_class[o.item()] += 1
                 # Track which class it changed to, but exclude the original class
-                changed_to_class[label.item()][a.item()] += 1  # Track which class it changed to
+                changed_to_class[o.item()][a.item()] += 1  # Track which class it changed to
 
     # Calculate the ratio of same predictions and changed predictions per class
     same_ratio_per_class = {class_id: same_count_per_class[class_id] / total_count_per_class[class_id]
