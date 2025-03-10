@@ -107,7 +107,7 @@ def create_data_loaders(config):
         num_workers=config["data"]["num_workers"]
     )
 
-    if config["testing"]:
+    if config["testing"]["is_testing"]:
         metamorphic_test_path = os.path.join(dataset_path, "test.csv")
         metamorphic_test_df = pd.read_csv(metamorphic_test_path)
 
@@ -118,9 +118,9 @@ def create_data_loaders(config):
 
         metamorphic_test_dataset = ForestNetDataset(
             metamorphic_test_df, dataset_path, transform=transform,
-            spatial_augmentation=config["transforms"]["spatial_augmentation"],
-            pixel_augmentation=config["transforms"]["pixel_augmentation"],
-            resize=config["transforms"]["resize"],
+            spatial_augmentation=config["testing"]["spatial_augmentation"],
+            pixel_augmentation=config["testing"]["pixel_augmentation"],
+            resize=config["testing"]["resize"],
             is_training=True, label_map=label_to_index,
             use_masks=config["data"]["use_masking"]
         )
