@@ -2,12 +2,9 @@ import argparse
 import json
 import os
 
-import pandas as pd
 import torch
 import torch.nn as nn
 from matplotlib import pyplot as plt
-from torch.utils.data import DataLoader
-from torchvision import transforms
 
 from config.default_config import DEFAULT_CONFIG
 from data.dataloader import create_data_loaders
@@ -15,13 +12,14 @@ from models.helpers import get_model
 from utils.helpers import get_device, load_checkpoint
 from utils.metrics import evaluate_model
 from utils.visualization import plot_confusion_matrix
-from data.dataset import ForestNetDataset
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Evaluate a model on the ForestNet dataset")
     parser.add_argument("--config", type=str, default=None, help="Path to config JSON")
     parser.add_argument("--checkpoint", type=str, required=True, help="Path to model checkpoint")
     return parser.parse_args()
+
 
 def performance_metrics():
     args = parse_args()
@@ -137,53 +135,6 @@ def metamorphic_testing():
         return
 
     compare_predictions(model, test_loader, metamorphic_test_loader, device, index_to_label)
-
-
-# def create_metamorphic_test_data(config):
-#     dataset_path = config["data"]["dataset_path"]
-#
-#     test_path = os.path.join(dataset_path, "test.csv")
-#     train_path = os.path.join(dataset_path, "train.csv")
-#
-#     test_df = pd.read_csv(test_path)
-#     train_df = pd.read_csv(train_path)
-#
-#     if config["data"].get("sample_data", False):
-#         seed = config["training"]["seed"]
-#         sample_size = config["data"].get("sample_size", 10)
-#         train_df = train_df.sample(n=sample_size, random_state=seed)
-#         test_df = test_df.sample(n=sample_size, random_state=seed)
-#
-#     transform = transforms.Compose([
-#         transforms.Resize((322, 322)),
-#         transforms.ToTensor(),
-#
-#         # TODO: Look into calculating these values for our dataset.
-#         transforms.Normalize(mean=[0.485, 0.456, 0.406],
-#                              std=[0.229, 0.224, 0.225])
-#     ])
-#
-#     # Create label mapping
-#     labels = sorted(train_df["merged_label"].unique())
-#     label_to_index = {label: idx for idx, label in enumerate(labels)}
-#
-#     test_dataset = ForestNetDataset(
-#         test_df, dataset_path, transform=transform,
-#         spatial_augmentation=config["transforms"]["spatial_augmentation"],
-#         pixel_augmentation=config["transforms"]["pixel_augmentation"],
-#         resize=config["transforms"]["resize"],
-#         is_training=True, label_map=label_to_index,
-#         use_masks=config["data"]["use_masking"]
-#     )
-#
-#     test_loader = DataLoader(
-#         test_dataset,
-#         batch_size=config["data"]["batch_size"],
-#         shuffle=False,
-#         num_workers=config["data"]["num_workers"]
-#     )
-#
-#     return test_loader
 
 
 def compare_predictions(model, test_loader, metamorphic_test_loader, device, index_to_label):
