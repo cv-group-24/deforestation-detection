@@ -23,5 +23,5 @@ DEFAULT_CONFIG = {
         "spatial_augmentation": "affine", ## or 'affine'
         "pixel_augmentation": "all" ## or 'all'
     },
-    "testing": True
+    "testing": False
 }
