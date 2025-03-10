@@ -230,6 +230,26 @@ class ForestNetDataset(Dataset):
         ## returns a 332 x 332 image
         return ndvi_scaled
     
+    def _get_img_stats(self, img, band_names):
+        """Calculate statistics for image bands."""
+        if len(img.shape) == 2:
+            img = img[np.newaxis, ...]  # Add channel dimension for 2D images
+        
+        # Ensure img is in (C, H, W) format
+        if img.shape[-1] == len(band_names):
+            img = np.transpose(img, (2, 0, 1))
+        
+        stats = []
+        for band_idx in range(img.shape[0]):
+            band_data = img[band_idx]
+            stats.extend([
+                band_data.min(),
+                band_data.max(),
+                band_data.mean(),
+                band_data.std()
+            ])
+        return stats
+    
     def get_multi_modal_features(self, row, feature_scale = False):
         sample_path = os.path.join(self.dataset_path, row["example_path"]) 
 
@@ -257,15 +277,21 @@ class ForestNetDataset(Dataset):
         # 332 x 332 image representing the NDVI values
         ndvi = self._get_ndvi(rgb_image, ir_img)
 
-        # TO DO: Add all other multi modal features to the same dictionary before converting to a tensor
-        
-        ## TODO: for image features, we need to compute statistics before making them into tensors (this is what they do in the code)
-
+        # Calculate statistics for each image type
+        srtm_stats = self._get_img_stats(srtm_img, ['band1', 'band2', 'band3'])
+        gfc_stats = self._get_img_stats(gfc_img, ['gain'])
+        ir_stats = self._get_img_stats(ir_img, IR_BANDS)
+        ndvi_stats = self._get_img_stats(ndvi, ['ndvi'])
 
         # Flatten and combine all features
         features = [
             osm_features["street_dist"],
             osm_features["city_dist"],
+            *ncep_features,  # Unpack NCEP features
+            *srtm_stats,     # Unpack SRTM statistics
+            *gfc_stats,      # Unpack GFC statistics
+            *ir_stats,       # Unpack IR statistics
+            *ndvi_stats      # Unpack NDVI statistics
         ]
         
         return torch.tensor(features, dtype=torch.float32)
