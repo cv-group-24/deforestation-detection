@@ -5,6 +5,9 @@ import os
 import torch
 import torch.nn as nn
 from matplotlib import pyplot as plt
+from collections import defaultdict
+import matplotlib.colors as mcolors
+import numpy as np
 
 from config.default_config import DEFAULT_CONFIG
 from data.dataloader import create_data_loaders
@@ -137,11 +140,79 @@ def metamorphic_testing():
     compare_predictions(model, test_loader, metamorphic_test_loader, device, index_to_label)
 
 
+# def compare_predictions(model, test_loader, metamorphic_test_loader, device, index_to_label):
+#     """
+#     Compare predictions between the test_loader and test_augmented_loader.
+#     This function will print how many times the predicted labels are the same or different
+#     and plot the ratio of same predictions per class.
+#
+#     Args:
+#         model: The trained model.
+#         test_loader: The original test data loader.
+#         metamorphic_test_loader: The augmented test data loader.
+#         device: The device (CPU or GPU).
+#         index_to_label: Mapping from index to label names (for plotting classes).
+#     """
+#     model.eval()  # Set the model to evaluation mode
+#
+#     # Initialize counters for same and different predictions per class
+#     same_count_per_class = {i: 0 for i in range(len(index_to_label))}
+#     total_count_per_class = {i: 0 for i in range(len(index_to_label))}
+#
+#     # Loop through the data from both loaders
+#     for (image_orig, label_orig), (image_aug, label_aug) in zip(test_loader, metamorphic_test_loader):
+#         # Move images and labels to the device
+#         image_orig, label_orig = image_orig.to(device), label_orig.to(device)
+#         image_aug, label_aug = image_aug.to(device), label_aug.to(device)
+#
+#         # Get predictions from both original and augmented data
+#         with torch.no_grad():
+#             pred_orig = torch.argmax(model(image_orig), dim=1)
+#             pred_aug = torch.argmax(model(image_aug), dim=1)
+#
+#         # Compare the predictions for the current image
+#         for o, a, label in zip(pred_orig, pred_aug, label_orig):
+#             total_count_per_class[label.item()] += 1
+#             if o == a:
+#                 same_count_per_class[label.item()] += 1
+#
+#     # Calculate the ratio of same predictions per class
+#     same_ratio_per_class = {class_id: same_count_per_class[class_id] / total_count_per_class[class_id]
+#                             if total_count_per_class[class_id] > 0 else 0
+#                             for class_id in same_count_per_class}
+#
+#     # Print the results
+#     print(f"\nPredictions comparison:")
+#     for class_id in same_ratio_per_class:
+#         print(f"Class {index_to_label[class_id]}: Same Prediction Ratio: {same_ratio_per_class[class_id]:.4f}")
+#
+#     # Plotting the ratio of same predictions per class
+#     plt.figure(figsize=(10, 6))
+#     bars = plt.bar(same_ratio_per_class.keys(), same_ratio_per_class.values(),
+#                    tick_label=[index_to_label[class_id] for class_id in same_ratio_per_class],
+#                    width=0.4)
+#     for bar in bars:
+#         height = bar.get_height()
+#         plt.text(bar.get_x() + bar.get_width() / 2, height, f'{height:.4f}', ha='center', va='bottom',
+#                  fontsize=10)  # Add text above each bar
+#     plt.xlabel('Classes')
+#     plt.ylabel('Ratio of Same Predictions')
+#     plt.title('Ratio of Same Predictions for Each Class')
+#     plt.xticks(rotation=45)
+#     plt.tight_layout()
+#     plt.savefig("outputs/metamorphic_testing.png")
+
+import matplotlib.pyplot as plt
+import numpy as np
+from collections import defaultdict
+import matplotlib.colors as mcolors
+import torch
+
 def compare_predictions(model, test_loader, metamorphic_test_loader, device, index_to_label):
     """
-    Compare predictions between the test_loader and test_augmented_loader.
+    Compare predictions between the test_loader and metamorphic_test_loader.
     This function will print how many times the predicted labels are the same or different
-    and plot the ratio of same predictions per class.
+    and plot the ratio of same and changed predictions per class.
 
     Args:
         model: The trained model.
@@ -154,7 +225,9 @@ def compare_predictions(model, test_loader, metamorphic_test_loader, device, ind
 
     # Initialize counters for same and different predictions per class
     same_count_per_class = {i: 0 for i in range(len(index_to_label))}
+    changed_count_per_class = {i: 0 for i in range(len(index_to_label))}
     total_count_per_class = {i: 0 for i in range(len(index_to_label))}
+    changed_to_class = defaultdict(lambda: defaultdict(int))  # To track which classes it changed to
 
     # Loop through the data from both loaders
     for (image_orig, label_orig), (image_aug, label_aug) in zip(test_loader, metamorphic_test_loader):
@@ -172,32 +245,86 @@ def compare_predictions(model, test_loader, metamorphic_test_loader, device, ind
             total_count_per_class[label.item()] += 1
             if o == a:
                 same_count_per_class[label.item()] += 1
+            else:
+                changed_count_per_class[label.item()] += 1
+                # Track which class it changed to, but exclude the original class
+                changed_to_class[label.item()][a.item()] += 1  # Track which class it changed to
 
-    # Calculate the ratio of same predictions per class
+    # Calculate the ratio of same predictions and changed predictions per class
     same_ratio_per_class = {class_id: same_count_per_class[class_id] / total_count_per_class[class_id]
                             if total_count_per_class[class_id] > 0 else 0
                             for class_id in same_count_per_class}
+    changed_ratio_per_class = {class_id: changed_count_per_class[class_id] / total_count_per_class[class_id]
+                               if total_count_per_class[class_id] > 0 else 0
+                               for class_id in changed_count_per_class}
 
     # Print the results
     print(f"\nPredictions comparison:")
     for class_id in same_ratio_per_class:
-        print(f"Class {index_to_label[class_id]}: Same Prediction Ratio: {same_ratio_per_class[class_id]:.4f}")
+        print(f"Class {index_to_label[class_id]}: Same Prediction Ratio: {same_ratio_per_class[class_id]:.4f}, "
+              f"Changed Prediction Ratio: {changed_ratio_per_class[class_id]:.4f}")
+        print(f"  Classes changed to (Counts): {[(index_to_label[class_id], count) for class_id, count in changed_to_class[class_id].items() if count > 0]}")
 
-    # Plotting the ratio of same predictions per class
-    plt.figure(figsize=(10, 6))
-    bars = plt.bar(same_ratio_per_class.keys(), same_ratio_per_class.values(),
-                   tick_label=[index_to_label[class_id] for class_id in same_ratio_per_class],
-                   width=0.4)
-    for bar in bars:
-        height = bar.get_height()
-        plt.text(bar.get_x() + bar.get_width() / 2, height, f'{height:.4f}', ha='center', va='bottom',
-                 fontsize=10)  # Add text above each bar
+    # Set up distinct colors for changed predictions
+    # Define a color palette without green (explicitly removing green)
+    distinct_colors = list(mcolors.TABLEAU_COLORS.values())
+    distinct_colors.remove(mcolors.TABLEAU_COLORS["tab:green"])  # Remove green
+    color_map = {class_id: distinct_colors[class_id % len(distinct_colors)] for class_id in changed_to_class}
+
+    # Plotting the ratio of same and changed predictions per class
+    plt.figure(figsize=(12, 8))
+
+    # For each class, create a stacked bar for same and changed predictions
+    bottom = np.zeros(len(index_to_label))  # Start with a bottom array (zeros) for stacking
+    for class_id in same_ratio_per_class:
+        # Plot the same predictions (green) for the bottom part
+        plt.bar(class_id, same_ratio_per_class[class_id], color='g', label="Same Predictions" if class_id == 0 else "")
+        bottom[class_id] += same_ratio_per_class[class_id]  # Update bottom for stacking
+
+        # Now, plot the changed predictions (in different colors based on target class)
+        total_changed_ratio = 0  # This will sum up the changed predictions ratio
+        for changed_class, count in changed_to_class[class_id].items():
+            # Calculate the ratio of changed predictions for the current class and changed class
+            changed_height = count / total_count_per_class[class_id]
+            plt.bar(class_id, changed_height, color=color_map[changed_class],
+                    bottom=bottom[class_id])
+            bottom[class_id] += changed_height  # Update bottom for the next stacked segment
+            total_changed_ratio += changed_height  # Add the current change ratio to the total changed ratio
+
+    # Add the ratio values on top of the bars for "same" predictions
+    for class_id in range(len(index_to_label)):
+        same_height = same_ratio_per_class[class_id]
+        changed_height = sum([changed_ratio_per_class[class_id] for class_id in changed_to_class])  # for all changes
+        # Adding text for "same" predictions
+        plt.text(class_id, same_height / 2, f'{same_height:.4f}', ha='center', va='center', fontsize=10, color='white')
+        # Adding text for "changed" predictions
+        plt.text(class_id, same_height + changed_height / 2, f'{changed_height:.4f}', ha='center', va='center',
+                 fontsize=10, color='white')
+
+    # Labeling
     plt.xlabel('Classes')
-    plt.ylabel('Ratio of Same Predictions')
-    plt.title('Ratio of Same Predictions for Each Class')
-    plt.xticks(rotation=45)
+    plt.ylabel('Prediction Ratio')
+    plt.title('Comparison of Same and Changed Predictions for Each Class')
+    plt.xticks(range(len(index_to_label)), [index_to_label[class_id] for class_id in range(len(index_to_label))],
+               rotation=45)
+
+    # Now manually add the labels to the legend for all "changed to" classes
+    handles, labels = plt.gca().get_legend_handles_labels()
+    for changed_class, color in color_map.items():
+        label = f"Changed to {index_to_label[changed_class]}"
+        # Add a handle for the changed class if it's not already in the legend
+        if label not in labels:
+            handles.append(
+                plt.Line2D([0], [0], marker='o', color='w', label=label, markersize=10, markerfacecolor=color))
+            labels.append(label)
+
+    # Add the legend to the plot
+    plt.legend(handles=handles, labels=labels, bbox_to_anchor=(1.05, 1), loc='upper left')
+
+    # Adjust layout to make room for the legend
     plt.tight_layout()
     plt.savefig("outputs/metamorphic_testing.png")
+
 
 
 if __name__ == "__main__":
