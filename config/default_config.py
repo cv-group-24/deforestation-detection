@@ -22,5 +22,6 @@ DEFAULT_CONFIG = {
         "resize": "small", ## or 'small'
         "spatial_augmentation": "affine", ## or 'affine'
         "pixel_augmentation": "all" ## or 'all'
-    }
+    },
+    "testing": True
 }

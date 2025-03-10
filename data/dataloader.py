@@ -70,10 +70,8 @@ def create_data_loaders(config):
         label_map=label_to_index,
         use_masks=config["data"]["use_masking"]
     )
-    print(" ---------------- Data Augmentation FINISHED ---------------- ")
 
     combined_train_dataset = ConcatDataset([train_dataset, train_dataset_augmented])
-    print(" ---------------- Dataset Concatenation FINISHED ---------------- ")
     
     val_dataset = ForestNetDataset(
         val_df, dataset_path, transform=transform,
@@ -108,7 +106,41 @@ def create_data_loaders(config):
         shuffle=False, 
         num_workers=config["data"]["num_workers"]
     )
-    
+
+    if config["testing"]:
+        metamorphic_test_path = os.path.join(dataset_path, "test.csv")
+        metamorphic_test_df = pd.read_csv(metamorphic_test_path)
+
+        if config["data"].get("sample_data", False):
+            seed = config["training"]["seed"]
+            sample_size = config["data"].get("sample_size", 10)
+            metamorphic_test_df = metamorphic_test_df.sample(n=sample_size, random_state=seed)
+
+        metamorphic_test_dataset = ForestNetDataset(
+            metamorphic_test_df, dataset_path, transform=transform,
+            spatial_augmentation=config["transforms"]["spatial_augmentation"],
+            pixel_augmentation=config["transforms"]["pixel_augmentation"],
+            resize=config["transforms"]["resize"],
+            is_training=True, label_map=label_to_index,
+            use_masks=config["data"]["use_masking"]
+        )
+
+        metamorphic_test_loader = DataLoader(
+            metamorphic_test_dataset,
+            batch_size=config["data"]["batch_size"],
+            shuffle=False,
+            num_workers=config["data"]["num_workers"]
+        )
+
+        return {
+            "train_loader": train_loader,
+            "val_loader": val_loader,
+            "test_loader": test_loader,
+            "metamorphic_test_loader": metamorphic_test_loader,
+            "label_to_index": label_to_index,
+            "index_to_label": {idx: label for label, idx in label_to_index.items()}
+        }
+
     return {
         "train_loader": train_loader,
         "val_loader": val_loader,
