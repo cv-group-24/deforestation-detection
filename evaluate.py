@@ -202,12 +202,6 @@ def metamorphic_testing():
 #     plt.tight_layout()
 #     plt.savefig("outputs/metamorphic_testing.png")
 
-import matplotlib.pyplot as plt
-import numpy as np
-from collections import defaultdict
-import matplotlib.colors as mcolors
-import torch
-
 def compare_predictions(model, test_loader, metamorphic_test_loader, device, index_to_label):
     """
     Compare predictions between the test_loader and metamorphic_test_loader.
