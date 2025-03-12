@@ -68,8 +68,7 @@ class ForestNetDataset(Dataset):
             # Debug: print the image_path to see if it looks correct
             image = Image.open(image_path).convert("RGB")
 
-            # get the latitude and longtidue of the image to calculase osm data
-            multi_modal_tensor = self.get_multi_modal_features(row, feature_scale=self.feature_scale)
+            mask_bool = None
 
             # Apply masking if enabled
             if self.use_masks:
@@ -91,6 +90,9 @@ class ForestNetDataset(Dataset):
 
             # Convert PIL image to numpy array before augmentation
             image_np = np.array(image)
+
+            # Get multi-modal features
+            multi_modal_tensor = self.get_multi_modal_features(row, feature_scale=self.feature_scale, mask=mask_bool)
 
             # Apply augmentation transformations if in training mode
             if self.is_training:
@@ -278,7 +280,7 @@ class ForestNetDataset(Dataset):
         ## returns a 332 x 332 image
         return ndvi_final
     
-    def _get_img_stats(self, img, band_names):
+    def _get_img_stats(self, img, band_names, mask=None):
         """Calculate statistics for image bands."""
         if len(img.shape) == 2:
             img = img[np.newaxis, ...]  # Add channel dimension for 2D images
@@ -290,15 +292,27 @@ class ForestNetDataset(Dataset):
         stats = []
         for band_idx in range(img.shape[0]):
             band_data = img[band_idx]
-            stats.extend([
-                band_data.min(),
-                band_data.max(),
-                band_data.mean(),
-                band_data.std()
-            ])
+
+            # Apply mask if provided
+            if mask is not None:
+                # assert that the mask has the same shape as the image
+                assert mask.shape == band_data.shape, "Mask shape does not match image shape"
+
+                band_data = band_data[mask]
+            
+            # Handle empty arrays (when mask filters out all pixels)
+            if band_data.size == 0:
+                stats.extend([0.0, 0.0, 0.0, 0.0])  # Default values for empty arrays
+            else:
+                stats.extend([
+                    float(band_data.min()),
+                    float(band_data.max()),
+                    float(band_data.mean()),
+                    float(band_data.std())
+                ])
         return stats
     
-    def get_multi_modal_features(self, row, feature_scale = False):
+    def get_multi_modal_features(self, row, feature_scale = False, mask=None):
         sample_path = os.path.join(self.dataset_path, row["example_path"]) 
 
         ## constant features ##
@@ -326,11 +340,11 @@ class ForestNetDataset(Dataset):
         ndvi = self._get_ndvi(rgb_image, ir_img, feature_scale)
 
         # Calculate statistics for each image type
-        rgb_stats = self._get_img_stats(rgb_image, RGB_BANDS)
-        srtm_stats = self._get_img_stats(srtm_img, ['band1', 'band2', 'band3'])
-        gfc_stats = self._get_img_stats(gfc_img, ['gain'])
-        ir_stats = self._get_img_stats(ir_img, IR_BANDS)
-        ndvi_stats = self._get_img_stats(ndvi, ['ndvi'])
+        rgb_stats = self._get_img_stats(rgb_image, RGB_BANDS, mask)
+        srtm_stats = self._get_img_stats(srtm_img, ['band1', 'band2', 'band3'], mask)
+        gfc_stats = self._get_img_stats(gfc_img, ['gain'], mask)
+        ir_stats = self._get_img_stats(ir_img, IR_BANDS, mask)
+        ndvi_stats = self._get_img_stats(ndvi, ['ndvi'], mask)
 
         # Flatten and combine all features
         features = [

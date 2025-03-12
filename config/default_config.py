@@ -4,7 +4,7 @@ DEFAULT_CONFIG = {
         "dataset_path": r"C:\Users\chris\Documents\DSAIT\CV - Q3\deforestation-detection\data\raw\ForestNetDataset",
         "batch_size": 32,
         "num_workers": 0,
-        "use_masking": False,
+        "use_masking": True,
         "sample_data": True,
         "sample_size": 100
     },
