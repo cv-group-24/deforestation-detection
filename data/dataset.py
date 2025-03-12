@@ -11,11 +11,7 @@ from geopy import distance
 import json
 import torch as torch
 
-# Band constants
-RGB_BANDS = ['R', 'G', 'B']
-IR_BANDS = ['NIR', 'RED_EDGE', 'COASTAL']
-RED_BAND = 'R'
-NIR_BAND = 'NIR'
+from utils.constants import *
 
 class ForestNetDataset(Dataset):
     def __init__(self,
@@ -28,7 +24,8 @@ class ForestNetDataset(Dataset):
                  resize="none",
                  is_training=False,
                  use_landsat=False,
-                 use_masks=False):
+                 use_masks=False,
+                 feature_scale=False):
         """
         Args:
             df (pd.DataFrame): DataFrame containing the image paths and labels.
@@ -58,6 +55,8 @@ class ForestNetDataset(Dataset):
             use_landsat=self.use_landsat
         )
 
+        self.feature_scale = feature_scale
+
     def __len__(self):
         return len(self.df)
 
@@ -70,7 +69,7 @@ class ForestNetDataset(Dataset):
             image = Image.open(image_path).convert("RGB")
 
             # get the latitude and longtidue of the image to calculase osm data
-            multi_modal_tensor = self.get_multi_modal_features(row, feature_scale=False)
+            multi_modal_tensor = self.get_multi_modal_features(row, feature_scale=self.feature_scale)
 
             # Apply masking if enabled
             if self.use_masks:
@@ -133,13 +132,6 @@ class ForestNetDataset(Dataset):
     def get_osm_features(self, sample_path, lat, lon, feature_scale=False):
 
         aux_path = os.path.join(sample_path, "auxiliary")
-
-        ## TO DO: Look into what the scaling here does / why these parameters are necessary
-        OSM_SCALING = {
-            'city': (0.19590, 513.49534),
-            'street': (0.00327, 513.49534)
-        }
-
         osm_path = os.path.join(aux_path, 'osm.json')
 
         # Load the combined JSON file
@@ -155,68 +147,121 @@ class ForestNetDataset(Dataset):
         city_dist = distance.distance((lat, lon),
                                         (city.get('lat'), city.get('lon'))).km
 
-        # if feature_scale:
-        #     street_min, street_max = OSM_SCALING['street']
-        #     street_dist = self._feature_scale(street_dist, street_min, street_max, False)
-        #     city_min, city_max = self.OSM_SCALING['city']
-        #     city_dist = self._feature_scale(city_dist, city_min, city_max, False)
+        if feature_scale:
+            street_min, street_max = OSM_SCALING['street']
+            street_dist = self._feature_scale(street_dist, street_min, street_max, False)
+            city_min, city_max = OSM_SCALING['city']
+            city_dist = self._feature_scale(city_dist, city_min, city_max, False)
                                         
         features = {'street_dist': street_dist,
                     'city_dist': city_dist}        
         return features 
 
-    def get_ncep_features(self, sample_path):
+    def get_ncep_features(self, sample_path, feature_scale=False):
         aux_path = os.path.join(sample_path, "auxiliary")
         ncep_file = os.path.join(aux_path, "ncep.npy")
         ncep_data = np.load(ncep_file)
 
-        ## TODO: figure out how to rescale the data, there are some rescaling constants in original code so maybe we use this?
+        scaled_ncep_data = np.zeros_like(ncep_data) if feature_scale else ncep_data
+        ## Manually looked at the ordering of NCEP Scaling constants in 'download_ncep.py' 
+        ## and ordered the NCEP scaling accordingly. This way we can scale the NCEP data
+        ## with hopefully the right scaling for the min, max and mean value for each feature
+        if feature_scale:
+            for i, feature in enumerate(NCEP_SCALING):
+                min_val = NCEP_SCALING[feature][0]
+                max_val = NCEP_SCALING[feature][1]
+                for j in range(3):
+                    scaled_ncep_data[3 * i + j] = self._feature_scale(ncep_data[3 * i + j], min_val, max_val)
 
         ## returns an array of 84 values, 3 values per ncep feature for 28 features
-        return ncep_data
+        return scaled_ncep_data
     
-    def get_srtm_img(self, sample_path):
+    def get_srtm_img(self, sample_path, feature_scale=False):
         aux_path = os.path.join(sample_path, "auxiliary")
         srtm_file = os.path.join(aux_path, "srtm.npy")
         srtm = np.load(srtm_file)
 
-        ## TODO: figure out how to rescale, they use _feature_scale in original
+        ## upon manual inspection, I've determined that band 0 is altitude, band 1 is aspect and band 2 is slope
+        band_to_id = {0: "altitude", 1: "aspect", 2: "slope"}
+
+        srtm_scaled = np.zeros_like(srtm) if feature_scale else srtm 
+
+        if feature_scale:
+            for i in range(srtm.shape[0]):
+                band_name = band_to_id[i]
+                ## scale based on max and min values for each band
+                srtm_scaled[i] = self._feature_scale(srtm[i], SRTM_SCALING[band_name][0], SRTM_SCALING[band_name][1])
+        
+        ## now we scale it back to have image values
+        srtm_final = self._feature_scale(srtm_scaled, 0, 255) if feature_scale else srtm_scaled
         
         ## returns a 332 x 332 image for each of the 3 SRTM bands, so 3 x 332 x 332
-        return srtm
+        return srtm_final
     
-    def get_gfc_img(self, sample_path):
+    def get_gfc_img(self, sample_path, feature_scale=False):
         aux_path = os.path.join(sample_path, "auxiliary")
         gfc_file = os.path.join(aux_path, "gfc.npy")
         ## GFC contains the GFC gain band and the GFC cover band, the original code uses only the gain band
         gfc = np.load(gfc_file)
 
         gfc_gain = gfc[0]  # GFC gain band
+
+        ## TODO: maybe take a look at what the cover band represents and see if it's useful
         gfc_cover = gfc[1]  # GFC cover band
 
         ## According to original code, the gfc gain band is already rescaled, so no rescaling needed
+        ## however, upon manual inspection, I see that the max value tends to be 100, so I will rescale it to [0, 255]
+        gfc_gain = self._feature_scale(gfc_gain, 0, 255) if feature_scale else gfc_gain
 
         ## gfc is a 2 x 1 x 332 x 332 image, so we return the 332 x 332 image
         ## we return only gfc_gain, not sure if we want to use cover as well, but we could try
         return gfc_gain
     
-    def get_ir_img(self, sample_path):
+    def get_ir_img(self, sample_path, feature_scale=False):
         images_path = os.path.join(sample_path, "images")
         ir_path = os.path.join(images_path, "infrared", "composite.npy")
         ir_img = np.load(ir_path)
 
-        ## TODO: figure out feature scaling for this too
+        # In the original code, the only scaling done is to scale the image to [0, 255]
+        scaled_ir_img = self._feature_scale(ir_img, 0, 255) if feature_scale else ir_img
 
         ## return a 332 x 332 x 3 image, not sure why
-        return ir_img
+        return scaled_ir_img
 
     def _feature_scale(self, x, x_min, x_max, clip=True):
-        """Scale features to [0, 1] range."""
+        """
+        Scale features from [x_min, x_max] to [0, 1] or [0, 255] range.
+        
+        Args:
+            x: Input array or scalar value
+            x_min: Minimum value of the original range
+            x_max: Maximum value of the original range
+            clip: Whether to clip values outside the [x_min, x_max] range
+        
+        Returns:
+            Scaled array or scalar
+        """
+        # Handle None values
+        if x is None:
+            return 0.0
+        
+        # Convert to numpy array if not already
+        if not isinstance(x, np.ndarray):
+            x = np.array(x)
+        
+        # Replace any None values with 0
+        if isinstance(x, np.ndarray) and np.issubdtype(x.dtype, np.object_):
+            x = np.where(x == None, 0, x.astype(float))
+        
+        # Scale to [0, 1]
         if clip:
             x = np.clip(x, x_min, x_max)
-        return (x - x_min) / (x_max - x_min)
+        
+        scaled = (x - x_min) / (x_max - x_min)
+        
+        return scaled
 
-    def _get_ndvi(self, rgb_image, ir_image):
+    def _get_ndvi(self, rgb_image, ir_image, feature_scale=False):
         """Calculate NDVI from RGB and IR images."""
         red_band_index = RGB_BANDS.index(RED_BAND)
         red_band = rgb_image[:, :, red_band_index].astype('float')
@@ -225,10 +270,13 @@ class ForestNetDataset(Dataset):
         ndvi_unscaled = ((nir_band - red_band + 1e-6) /
                          (nir_band + red_band + 1e-6))
         # NDVI ranges between -1 and 1
-        ndvi_scaled = self._feature_scale(ndvi_unscaled, -1, 1)
+        ndvi_scaled = self._feature_scale(ndvi_unscaled, -1, 1) if feature_scale else ndvi_unscaled
+
+        # now convert to image values
+        ndvi_final = self._feature_scale(ndvi_scaled, 0, 255) if feature_scale else ndvi_scaled
 
         ## returns a 332 x 332 image
-        return ndvi_scaled
+        return ndvi_final
     
     def _get_img_stats(self, img, band_names):
         """Calculate statistics for image bands."""
@@ -258,26 +306,27 @@ class ForestNetDataset(Dataset):
         # simply dict of street_dist and city_dist
         osm_features = self.get_osm_features(sample_path, row["latitude"], row["longitude"], feature_scale)
         # 1-d list of 84 values, 3 values per ncep feature for 28 features
-        ncep_features = self.get_ncep_features(sample_path)
+        ncep_features = self.get_ncep_features(sample_path, feature_scale)
 
         ## image features ## 
         # 3 x 332 x 332 image representing the srtm values for different bands
-        srtm_img = self.get_srtm_img(sample_path)
+        srtm_img = self.get_srtm_img(sample_path, feature_scale)
 
-        # 332 x 332 image representing the gfc gain band
-        gfc_img = self.get_gfc_img(sample_path)
+        # 332 x 332 image representing the gfc gain band, no rescaling needed
+        gfc_img = self.get_gfc_img(sample_path, feature_scale)
 
         # 332 x 332 x 3 image representing the infrared values
-        ir_img = self.get_ir_img(sample_path)
+        ir_img = self.get_ir_img(sample_path, feature_scale)
 
         # Calculate NDVI from RGB and IR images
         image_path = os.path.join(self.dataset_path, row["example_path"], "images/visible/composite.png")
         rgb_image = np.array(Image.open(image_path).convert("RGB"))
 
         # 332 x 332 image representing the NDVI values
-        ndvi = self._get_ndvi(rgb_image, ir_img)
+        ndvi = self._get_ndvi(rgb_image, ir_img, feature_scale)
 
         # Calculate statistics for each image type
+        rgb_stats = self._get_img_stats(rgb_image, RGB_BANDS)
         srtm_stats = self._get_img_stats(srtm_img, ['band1', 'band2', 'band3'])
         gfc_stats = self._get_img_stats(gfc_img, ['gain'])
         ir_stats = self._get_img_stats(ir_img, IR_BANDS)
@@ -288,6 +337,7 @@ class ForestNetDataset(Dataset):
             osm_features["street_dist"],
             osm_features["city_dist"],
             *ncep_features,  # Unpack NCEP features
+            *rgb_stats,      # Unpack RGB statistics
             *srtm_stats,     # Unpack SRTM statistics
             *gfc_stats,      # Unpack GFC statistics
             *ir_stats,       # Unpack IR statistics
