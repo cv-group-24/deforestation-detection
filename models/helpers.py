@@ -1,4 +1,5 @@
 from models.cnn import SimpleCNN, EnhancedCNN
+from models.multi_modal_mlp import MultiModalMLP
 from models.transferlearning import ResNetTransferLearning, EfficientNetTransferLearning, DenseNetTransferLearning
 
 
@@ -26,5 +27,7 @@ def get_model(model_type, num_classes, multi_modal_size):
         return EfficientNetTransferLearning(num_classes, multi_modal_size)
     elif model_type == "DenseNetTransferLearning":
         return DenseNetTransferLearning(num_classes, multi_modal_size)
+    elif model_type == "MLP":
+        return MultiModalMLP(input_size=multi_modal_size, num_classes=num_classes)
     else:
         raise ValueError(f"Unknown model type: {model_type}")

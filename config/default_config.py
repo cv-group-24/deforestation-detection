@@ -19,6 +19,7 @@ DEFAULT_CONFIG = {
         "dropout_rate": 0.5, 
         "multi_modal_size": 130,
         "feature_scaling": True,
+        "multi_modal_model": "MLP",
     },
     "transforms": {
         "resize": "small", ## or 'small'
