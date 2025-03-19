@@ -11,7 +11,7 @@ class MultiModalMLP(nn.Module):
         self.fc3 = nn.Linear(32, num_classes)
         self.dropout = nn.Dropout(0.3)
 
-    def forward(self, x):
+    def forward(self, images, x):
         x = self.sigmoid(self.fc1(x))
         x = self.dropout(x)
         x = self.sigmoid(self.fc2(x))

@@ -50,6 +50,10 @@ def main():
     
     num_classes = len(data["label_to_index"])
     multi_modal_size = config["model"]["multi_modal_size"]
+
+    
+    cnn_optimizer = None
+    multi_modal_optimizer = None
     
     # Create CNN model
     cnn_model = None
@@ -60,11 +64,12 @@ def main():
         multi_modal_size
         )
         cnn_model = cnn_model.to(device)
+        cnn_optimizer = optim.Adam(cnn_model.parameters(), lr=config["training"]["learning_rate"])
 
 
     # If the multi_modal_model parameter is not set then this will be set to None
     multi_modal_model = None
-    if (config["model"["train_multi_modal_model"]]):
+    if (config["model"]["train_multi_modal_model"]):
         multi_modal_model = get_model(
             config["model"]["multi_modal_model"], 
             num_classes, 
@@ -72,12 +77,11 @@ def main():
         )
 
         multi_modal_model = multi_modal_model.to(device)
+        multi_modal_optimizer = optim.Adam(multi_modal_model.parameters(), lr=config["training"]["learning_rate"])
     
     # Define loss function and optimizer
     criterion = nn.CrossEntropyLoss()
 
-    cnn_optimizer = optim.Adam(cnn_model.parameters(), lr=config["training"]["learning_rate"])
-    multi_modal_optimizer = optim.Adam(multi_modal_model.parameters(), lr=config["training"]["learning_rate"])
     
     # Training variables
     num_epochs = config["training"]["num_epochs"]
@@ -121,6 +125,8 @@ def main():
             labels = labels.to(device)
             multi_modal_features = multi_modal_features.to(device)
 
+            print(multi_modal_features.shape)
+
             # TRAIN CNN
             if (config["model"]["train_cnn"]):
                 cnn_optimizer.zero_grad()
@@ -133,42 +139,53 @@ def main():
             # TRAIN MULTI MODAL 
             if (multi_modal_model):
                 multi_modal_optimizer.zero_grad()
-                outputs = multi_modal_model(multi_modal_features)
+
+                # STILL PASS THE IMAGES TO THE MULTI MODAL EVEN THOUGH IT DOESN"T DO ANYTHING WITH THEM
+                outputs = multi_modal_model(images, multi_modal_features)
                 loss = criterion(outputs, labels)
                 loss.backward()
                 multi_modal_optimizer.step()
                 multi_modal_running_loss = loss.item() * images.size(0)
-    
-        
-        cnn_epoch_loss = cnn_running_loss / len(train_loader.dataset)
-        cnn_training_losses.append(cnn_epoch_loss)
 
-        multi_modal_epoch_loss = multi_modal_running_loss / len(train_loader.dataset)
-        multi_modal_training_losses.append(cnn_epoch_loss)
         
-        # Validation phase
-        cnn_val_metrics = evaluate_model(cnn_model, val_loader, criterion, device)
-        cnn_validation_losses.append(cnn_val_metrics["loss"])
+        # If the CNN is enabled evaluate it
+        if (config["model"]["train_cnn"]):
+            cnn_epoch_loss = cnn_running_loss / len(train_loader.dataset)
+            cnn_training_losses.append(cnn_epoch_loss)
+            
+            # Validation phase
+            cnn_val_metrics = evaluate_model(cnn_model, val_loader, criterion, device)
+            cnn_validation_losses.append(cnn_val_metrics["loss"])
 
-        multi_modal_val_metrics = evaluate_model(multi_modal_model, val_loader, criterion, device)
-        multi_modal_validation_losses.append(multi_modal_val_metrics["loss"])
-        
-        # Test phase (optional during training)
-        cnn_test_metrics = evaluate_model(cnn_model, test_loader, criterion, device)
-        cnn_test_losses.append(cnn_test_metrics["loss"])
+            # Test phase (optional during training)
+            cnn_test_metrics = evaluate_model(cnn_model, test_loader, criterion, device)
+            cnn_test_losses.append(cnn_test_metrics["loss"])
 
-        multi_modal_test_metrics = evaluate_model(multi_modal_model, test_loader, criterion, device)
-        multi_modal_test_losses.append(multi_modal_test_metrics["loss"])
-        
-        # Print epoch stats
-        print(f"Epoch {epoch+1}/{num_epochs}:")
-        print(f"  Training Loss     CNN: {cnn_epoch_loss:.4f}     Multi Modal: {multi_modal_epoch_loss}")
-        print(f"  Validation Loss     CNN: {cnn_val_metrics['loss']:.4f}     Multi Modal: {multi_modal_val_metrics['loss']}")
-        print(f"  Test Loss     CNN: {cnn_test_metrics['loss']:.4f}     Multi Modal: {multi_modal_test_metrics['loss']}")
-        print(f"  Validation Accuracy: CNN: {cnn_val_metrics['accuracy']:.4f}     Multi Modal: {multi_modal_test_metrics['accuracy']}")
-        
+            # Print epoch stats
+            print(f"Epoch {epoch+1}/{num_epochs} for CNN:")
+            print(f"  Training Loss:{cnn_epoch_loss:.4f}")
+            print(f"  Validation Loss: {cnn_val_metrics['loss']:.4f}")
+            print(f"  Test Loss: {cnn_test_metrics['loss']:.4f}")
+            print(f"  Validation Accuracy: {cnn_val_metrics['accuracy']:.4f}")
+
+        # If the MultiModal is enabled evaluate it
+        if (config["model"]["train_multi_modal_model"]):
+            multi_modal_epoch_loss = multi_modal_running_loss / len(train_loader.dataset)
+            multi_modal_training_losses.append(multi_modal_epoch_loss)
+            multi_modal_val_metrics = evaluate_model(multi_modal_model, val_loader, criterion, device)
+            multi_modal_validation_losses.append(multi_modal_val_metrics["loss"])
+            multi_modal_test_metrics = evaluate_model(multi_modal_model, test_loader, criterion, device)
+            multi_modal_test_losses.append(multi_modal_test_metrics["loss"])
+
+            # Print epoch stats
+            print(f"Epoch {epoch+1}/{num_epochs} for MultiModal:")
+            print(f"  Training Loss: {multi_modal_epoch_loss:.4f}")
+            print(f"  Validation Loss: {multi_modal_val_metrics['loss']:.4f}")
+            print(f"  Test Loss: {multi_modal_test_metrics['loss']:.4f}")
+            print(f"  Validation Accuracy:{multi_modal_test_metrics['accuracy']:.4f}")
+
         # Early stopping check for CNN
-        if cnn_val_metrics["loss"] < cnn_best_val_loss:
+        if config["model"]["train_cnn"] and cnn_val_metrics["loss"] < cnn_best_val_loss:
             cnn_best_val_loss = cnn_val_metrics["loss"]
             cnn_epochs_without_improvement = 0
             cnn_best_model_state = copy.deepcopy(cnn_model.state_dict())
@@ -190,7 +207,7 @@ def main():
                 break
 
         # Early stopping check MultiModal
-        if multi_modal_val_metrics["loss"] < multi_modal_best_val_loss:
+        if config["model"]["train_multi_modal_model"] and multi_modal_val_metrics["loss"] < multi_modal_best_val_loss:
             multi_modal_best_val_loss = multi_modal_val_metrics["loss"]
             multi_modal_epochs_without_improvement = 0
             multi_modal_best_model_state = copy.deepcopy(multi_modal_model.state_dict())
@@ -227,11 +244,11 @@ def main():
         cnn_model.load_state_dict(cnn_best_model_state)
         print("Loaded best model based on validation loss")
     
-    # Final evaluation on test set
-    test_metrics = evaluate_model(cnn_model, test_loader, criterion, device)
-    print("\nFinal Test Metrics CNN:")
-    print(f"  Loss: {test_metrics['loss']:.4f}")
-    print(f"  Accuracy: {test_metrics['accuracy']:.4f}")
+        # Final evaluation on test set
+        test_metrics = evaluate_model(cnn_model, test_loader, criterion, device)
+        print("\nFinal Test Metrics CNN:")
+        print(f"  Loss: {test_metrics['loss']:.4f}")
+        print(f"  Accuracy: {test_metrics['accuracy']:.4f}")
 
 
     # Load best model for final evaluation
@@ -239,11 +256,11 @@ def main():
         multi_modal_model.load_state_dict(multi_modal_best_model_state)
         print("Loaded best model based on validation loss")
     
-    # Final evaluation on test set
-    test_metrics = evaluate_model(multi_modal_model, test_loader, criterion, device)
-    print("\nFinal Test Metrics Multi Modal:")
-    print(f"  Loss: {test_metrics['loss']:.4f}")
-    print(f"  Accuracy: {test_metrics['accuracy']:.4f}")
+        # Final evaluation on test set
+        test_metrics = evaluate_model(multi_modal_model, test_loader, criterion, device)
+        print("\nFinal Test Metrics Multi Modal:")
+        print(f"  Loss: {test_metrics['loss']:.4f}")
+        print(f"  Accuracy: {test_metrics['accuracy']:.4f}")
     
     print("Training complete!")
 
