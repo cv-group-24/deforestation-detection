@@ -37,12 +37,19 @@ def plot_confusion_matrix(conf_matrix, class_names, output_path='outputs/confusi
         class_names: List of class names
     """
     plt.figure(figsize=(10, 8))
-    sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues',
-                xticklabels=class_names, yticklabels=class_names)
+    ax = sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Greens',
+                     xticklabels=class_names, yticklabels=class_names,
+                     annot_kws={"size": 17})  # Adjust color bar size
     plt.xlabel('Predicted')
     plt.ylabel('True')
     plt.title('Confusion Matrix')
+
+    # Increase font size for color bar (legend)
+    cbar = ax.collections[0].colorbar  # Access color bar
+    cbar.ax.tick_params(labelsize=17)  # Increase font size of color bar ticks
     plt.savefig(output_path)
+
+
     # plt.show()
 
 def visualize_samples(dataset, class_names, num_samples=5):

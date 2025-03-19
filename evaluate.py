@@ -4,7 +4,7 @@ import os
 
 import torch
 import torch.nn as nn
-from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt, cm
 from collections import defaultdict
 import matplotlib.colors as mcolors
 import numpy as np
@@ -259,11 +259,11 @@ def compare_predictions(model, test_loader, metamorphic_test_loader, device, ind
               f"Changed Prediction Ratio: {changed_ratio_per_class[class_id]:.4f}")
         print(f"  Classes changed to (Counts): {[(index_to_label[class_id], count) for class_id, count in changed_to_class[class_id].items() if count > 0]}")
 
-    # Set up distinct colors for changed predictions
-    # Define a color palette without green (explicitly removing green)
-    distinct_colors = list(mcolors.TABLEAU_COLORS.values())
-    distinct_colors.remove(mcolors.TABLEAU_COLORS["tab:green"])  # Remove green
-    color_map = {class_id: distinct_colors[class_id % len(distinct_colors)] for class_id in changed_to_class}
+    # Define your custom orange shades
+    orange_shades = ["#fcb538", "#e17929", "#c74e29", "#ffde59"]
+
+    # Map class IDs to these colors in a cyclic manner
+    color_map = {class_id: orange_shades[i % len(orange_shades)] for i, class_id in enumerate(changed_to_class)}
 
     # Plotting the ratio of same and changed predictions per class
     plt.figure(figsize=(12, 8))
@@ -290,7 +290,7 @@ def compare_predictions(model, test_loader, metamorphic_test_loader, device, ind
         same_height = same_ratio_per_class[class_id]
         changed_height = sum([changed_ratio_per_class[class_id] for class_id in changed_to_class])  # for all changes
         # Adding text for "same" predictions
-        plt.text(class_id, same_height / 2, f'{same_height:.4f}', ha='center', va='center', fontsize=10, color='white')
+        plt.text(class_id, same_height / 2, f'{same_height:.4f}', ha='center', va='center', fontsize=20, color='white')
         # Adding text for "changed" predictions
         plt.text(class_id, same_height + changed_height / 2, f'{changed_height:.4f}', ha='center', va='center',
                  fontsize=10, color='white')
@@ -298,6 +298,7 @@ def compare_predictions(model, test_loader, metamorphic_test_loader, device, ind
     # Labeling
     plt.xlabel('Classes')
     plt.ylabel('Prediction Ratio')
+    plt.tick_params(axis='y', labelsize=15)
     plt.title('Comparison of Same and Changed Predictions for Each Class')
     plt.xticks(range(len(index_to_label)), [index_to_label[class_id] for class_id in range(len(index_to_label))],
                rotation=45)
@@ -322,6 +323,6 @@ def compare_predictions(model, test_loader, metamorphic_test_loader, device, ind
 
 
 if __name__ == "__main__":
-    # performance_metrics()
-    metamorphic_testing()
+    performance_metrics()
+    # metamorphic_testing()
 
