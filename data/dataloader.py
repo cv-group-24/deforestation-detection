@@ -58,7 +58,8 @@ def create_data_loaders(config):
     train_dataset = ForestNetDataset(
         train_df, dataset_path, transform=transform,
         is_training=False, label_map=label_to_index,
-        use_masks=config["data"]["use_masking"]
+        use_masks=config["data"]["use_masking"],
+        feature_scale=config["model"]["feature_scaling"]
     )
 
     train_dataset_augmented = ForestNetDataset(
@@ -68,7 +69,8 @@ def create_data_loaders(config):
         resize=config["transforms"]["resize"],
         is_training=True,
         label_map=label_to_index,
-        use_masks=config["data"]["use_masking"]
+        use_masks=config["data"]["use_masking"],
+        feature_scale=config["model"]["feature_scaling"]
     )
     print(" ---------------- Data Augmentation FINISHED ---------------- ")
 
