@@ -1,6 +1,7 @@
 from torch.utils.data import DataLoader, ConcatDataset
 import pandas as pd
 import os
+import torch as torch
 
 from data.dataset import ForestNetDataset
 from torchvision import transforms
@@ -74,7 +75,13 @@ def create_data_loaders(config):
     )
     print(" ---------------- Data Augmentation FINISHED ---------------- ")
 
-    combined_train_dataset = ConcatDataset([train_dataset, train_dataset_augmented])
+
+    combined_train_dataset = train_dataset
+
+    # ONLY ACTUALLY CONCATINATE IF IT IS SET IN THE CONFIG
+    if (config["data"]["augment_training_set"]):
+        combined_train_dataset = ConcatDataset([train_dataset, train_dataset_augmented])
+    
     print(" ---------------- Dataset Concatenation FINISHED ---------------- ")
     
     val_dataset = ForestNetDataset(
@@ -94,21 +101,21 @@ def create_data_loaders(config):
         combined_train_dataset,
         batch_size=config["data"]["batch_size"], 
         shuffle=True, 
-        num_workers=config["data"]["num_workers"]
+        num_workers=config["data"]["num_workers"], 
     )
     
     val_loader = DataLoader(
         val_dataset, 
         batch_size=config["data"]["batch_size"], 
         shuffle=False, 
-        num_workers=config["data"]["num_workers"]
+        num_workers=config["data"]["num_workers"], 
     )
     
     test_loader = DataLoader(
         test_dataset, 
         batch_size=config["data"]["batch_size"], 
         shuffle=False, 
-        num_workers=config["data"]["num_workers"]
+        num_workers=config["data"]["num_workers"],
     )
     
     return {

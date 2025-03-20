@@ -14,6 +14,10 @@ from models.helpers import get_model
 from utils.helpers import set_seed, get_device, save_checkpoint
 from utils.metrics import evaluate_model
 from utils.visualization import plot_losses
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, log_loss
+import numpy as np
+from sklearn.tree import DecisionTreeClassifier
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train a model on the ForestNet dataset")
@@ -39,7 +43,8 @@ def main():
     set_seed(config["training"]["seed"])
     
     # Get device
-    device = get_device()
+    # device = get_device()
+    device = 'cpu'
     print(f"Using device: {device}")
     
     # Create data loaders
@@ -68,16 +73,25 @@ def main():
 
 
     # If the multi_modal_model parameter is not set then this will be set to None
-    multi_modal_model = None
-    if (config["model"]["train_multi_modal_model"]):
-        multi_modal_model = get_model(
-            config["model"]["multi_modal_model"], 
-            num_classes, 
-            multi_modal_size=multi_modal_size
-        )
+    # multi_modal_model = None
+    # if (config["model"]["train_multi_modal_model"]):
+    #     multi_modal_model = get_model(
+    #         config["model"]["multi_modal_model"], 
+    #         num_classes, 
+    #         multi_modal_size=multi_modal_size
+    #     )
 
-        multi_modal_model = multi_modal_model.to(device)
-        multi_modal_optimizer = optim.Adam(multi_modal_model.parameters(), lr=config["training"]["learning_rate"])
+    #     multi_modal_model = multi_modal_model.to(device)
+    #     multi_modal_optimizer = optim.Adam(multi_modal_model.parameters(), lr=config["training"]["learning_rate"])
+
+    # Initialize RandomForestClassifier for multi-modal model
+    multi_modal_model = None
+    if config["model"]["train_multi_modal_model"]:
+        multi_modal_model = DecisionTreeClassifier(
+            max_depth=config["model"].get("multi_modal_max_depth", 10),  # Control tree depth
+            criterion=config["model"].get("multi_modal_criterion", "gini"),  # 'gini' or 'entropy'
+            random_state=config["training"]["seed"]
+        )
     
     # Define loss function and optimizer
     criterion = nn.CrossEntropyLoss()
@@ -113,8 +127,8 @@ def main():
         if (cnn_model):
             cnn_model.train()
 
-        if (multi_modal_model):
-            multi_modal_model.train()
+        # if (multi_modal_model):
+        #     multi_modal_model.train()
 
             
         # by defaults both losses are 0 but this is overwidden by the training below. Ie. it is 0 if the models are not set to be training
@@ -124,8 +138,6 @@ def main():
             images = images.to(device)
             labels = labels.to(device)
             multi_modal_features = multi_modal_features.to(device)
-
-            print(multi_modal_features.shape)
 
             # TRAIN CNN
             if (config["model"]["train_cnn"]):
@@ -137,15 +149,31 @@ def main():
                 cnn_running_loss = cnn_running_loss + loss.item() * images.size(0)
 
             # TRAIN MULTI MODAL 
-            if (multi_modal_model):
-                multi_modal_optimizer.zero_grad()
+            # if (multi_modal_model):
+            #     multi_modal_optimizer.zero_grad()
 
-                # STILL PASS THE IMAGES TO THE MULTI MODAL EVEN THOUGH IT DOESN"T DO ANYTHING WITH THEM
-                outputs = multi_modal_model(images, multi_modal_features)
-                loss = criterion(outputs, labels)
-                loss.backward()
-                multi_modal_optimizer.step()
-                multi_modal_running_loss = loss.item() * images.size(0)
+            #     # STILL PASS THE IMAGES TO THE MULTI MODAL EVEN THOUGH IT DOESN"T DO ANYTHING WITH THEM
+            #     outputs = multi_modal_model(images, multi_modal_features)
+            #     loss = criterion(outputs, labels)
+            #     loss.backward()
+            #     multi_modal_optimizer.step()
+            #     multi_modal_running_loss = loss.item() * images.size(0)
+
+            if config["model"]["train_multi_modal_model"]:
+                multi_modal_features_list = []
+                labels_list = []
+
+                # Collect all features and labels for fitting
+                for _, multi_modal_features, labels in train_loader:
+                    multi_modal_features_list.append(multi_modal_features.cpu().numpy())
+                    labels_list.append(labels.cpu().numpy())
+                
+                X_train = np.vstack(multi_modal_features_list)
+                y_train = np.hstack(labels_list)
+
+                # Fit the Random Forest model
+                multi_modal_model.fit(X_train, y_train)
+
 
         
         # If the CNN is enabled evaluate it
@@ -169,20 +197,57 @@ def main():
             print(f"  Validation Accuracy: {cnn_val_metrics['accuracy']:.4f}")
 
         # If the MultiModal is enabled evaluate it
-        if (config["model"]["train_multi_modal_model"]):
-            multi_modal_epoch_loss = multi_modal_running_loss / len(train_loader.dataset)
-            multi_modal_training_losses.append(multi_modal_epoch_loss)
-            multi_modal_val_metrics = evaluate_model(multi_modal_model, val_loader, criterion, device)
-            multi_modal_validation_losses.append(multi_modal_val_metrics["loss"])
-            multi_modal_test_metrics = evaluate_model(multi_modal_model, test_loader, criterion, device)
-            multi_modal_test_losses.append(multi_modal_test_metrics["loss"])
+        # if (config["model"]["train_multi_modal_model"]):
+        #     multi_modal_epoch_loss = multi_modal_running_loss / len(train_loader.dataset)
+        #     multi_modal_training_losses.append(multi_modal_epoch_loss)
+        #     multi_modal_val_metrics = evaluate_model(multi_modal_model, val_loader, criterion, device)
+        #     multi_modal_validation_losses.append(multi_modal_val_metrics["loss"])
+        #     multi_modal_test_metrics = evaluate_model(multi_modal_model, test_loader, criterion, device)
+        #     multi_modal_test_losses.append(multi_modal_test_metrics["loss"])
 
-            # Print epoch stats
-            print(f"Epoch {epoch+1}/{num_epochs} for MultiModal:")
-            print(f"  Training Loss: {multi_modal_epoch_loss:.4f}")
-            print(f"  Validation Loss: {multi_modal_val_metrics['loss']:.4f}")
-            print(f"  Test Loss: {multi_modal_test_metrics['loss']:.4f}")
-            print(f"  Validation Accuracy:{multi_modal_test_metrics['accuracy']:.4f}")
+        #     # Print epoch stats
+        #     print(f"Epoch {epoch+1}/{num_epochs} for MultiModal:")
+        #     print(f"  Training Loss: {multi_modal_epoch_loss:.4f}")
+        #     print(f"  Validation Loss: {multi_modal_val_metrics['loss']:.4f}")
+        #     print(f"  Test Loss: {multi_modal_test_metrics['loss']:.4f}")
+        #     print(f"  Validation Accuracy:{multi_modal_test_metrics['accuracy']:.4f}")
+
+        if config["model"]["train_multi_modal_model"]:
+            val_features_list, val_labels_list = [], []
+            for _, multi_modal_features, labels in val_loader:
+                val_features_list.append(multi_modal_features.cpu().numpy())
+                val_labels_list.append(labels.cpu().numpy())
+            
+            X_val = np.vstack(val_features_list)
+            y_val = np.hstack(val_labels_list)
+
+            val_predictions = multi_modal_model.predict_proba(X_val)
+            val_loss = log_loss(y_val, val_predictions)
+            val_accuracy = accuracy_score(y_val, multi_modal_model.predict(X_val))
+            
+            multi_modal_validation_losses.append(val_loss)
+            
+            print(f"Epoch {epoch+1}/{num_epochs} for Random Forest MultiModal:")
+            print(f"  Validation Loss: {val_loss:.4f}")
+            print(f"  Validation Accuracy: {val_accuracy:.4f}")
+
+            # Early stopping logic
+            if val_loss < multi_modal_best_val_loss:
+                multi_modal_best_val_loss = val_loss
+                multi_modal_epochs_without_improvement = 0
+
+                # Save the best model
+                if not os.path.exists("outputs"):
+                    os.makedirs("outputs")
+                import joblib
+                joblib.dump(multi_modal_model, "outputs/multi_modal_best_model.pkl")
+            else:
+                multi_modal_epochs_without_improvement += 1
+                print(f" Multi Modal No improvement for {multi_modal_epochs_without_improvement} epoch(s)")
+                if multi_modal_epochs_without_improvement >= patience:
+                    print("Early stopping triggered!")
+                    break
+
 
         # Early stopping check for CNN
         if config["model"]["train_cnn"] and cnn_val_metrics["loss"] < cnn_best_val_loss:
@@ -207,26 +272,26 @@ def main():
                 break
 
         # Early stopping check MultiModal
-        if config["model"]["train_multi_modal_model"] and multi_modal_val_metrics["loss"] < multi_modal_best_val_loss:
-            multi_modal_best_val_loss = multi_modal_val_metrics["loss"]
-            multi_modal_epochs_without_improvement = 0
-            multi_modal_best_model_state = copy.deepcopy(multi_modal_model.state_dict())
+        # if config["model"]["train_multi_modal_model"] and multi_modal_val_metrics["loss"] < multi_modal_best_val_loss:
+        #     multi_modal_best_val_loss = multi_modal_val_metrics["loss"]
+        #     multi_modal_epochs_without_improvement = 0
+        #     multi_modal_best_model_state = copy.deepcopy(multi_modal_model.state_dict())
             
-            if not os.path.exists("outputs"):
-                    os.makedirs("outputs")
+        #     if not os.path.exists("outputs"):
+        #             os.makedirs("outputs")
             
-            # Save best model
-            save_checkpoint(
-                multi_modal_model, multi_modal_optimizer, epoch, multi_modal_best_val_loss,
-                os.path.join("outputs", "multi_modal_best_model.pth")
-            )
-        else:
-            multi_modal_epochs_without_improvement += 1
-            print(f" Multi Modal No improvement for {multi_modal_epochs_without_improvement} epoch(s)")
+        #     # Save best model
+        #     save_checkpoint(
+        #         multi_modal_model, multi_modal_optimizer, epoch, multi_modal_best_val_loss,
+        #         os.path.join("outputs", "multi_modal_best_model.pth")
+        #     )
+        # else:
+        #     multi_modal_epochs_without_improvement += 1
+        #     print(f" Multi Modal No improvement for {multi_modal_epochs_without_improvement} epoch(s)")
             
-            if multi_modal_epochs_without_improvement >= patience:
-                print("Early stopping triggered!")
-                break
+        #     if multi_modal_epochs_without_improvement >= patience:
+        #         print("Early stopping triggered!")
+        #         break
         
         # Calculate and display timing info
         epoch_end = time.time()
@@ -252,15 +317,35 @@ def main():
 
 
     # Load best model for final evaluation
-    if multi_modal_best_model_state is not None:
-        multi_modal_model.load_state_dict(multi_modal_best_model_state)
-        print("Loaded best model based on validation loss")
+    # if multi_modal_best_model_state is not None:
+    #     multi_modal_model.load_state_dict(multi_modal_best_model_state)
+    #     print("Loaded best model based on validation loss")
     
-        # Final evaluation on test set
-        test_metrics = evaluate_model(multi_modal_model, test_loader, criterion, device)
-        print("\nFinal Test Metrics Multi Modal:")
-        print(f"  Loss: {test_metrics['loss']:.4f}")
-        print(f"  Accuracy: {test_metrics['accuracy']:.4f}")
+    #     # Final evaluation on test set
+    #     test_metrics = evaluate_model(multi_modal_model, test_loader, criterion, device)
+    #     print("\nFinal Test Metrics Multi Modal:")
+    #     print(f"  Loss: {test_metrics['loss']:.4f}")
+    #     print(f"  Accuracy: {test_metrics['accuracy']:.4f}")
+
+    if config["model"]["train_multi_modal_model"]:
+        best_rf_model = joblib.load("outputs/multi_modal_best_model.pkl")
+        
+        test_features_list, test_labels_list = [], []
+        for _, multi_modal_features, labels in test_loader:
+            test_features_list.append(multi_modal_features.cpu().numpy())
+            test_labels_list.append(labels.cpu().numpy())
+
+        X_test = np.vstack(test_features_list)
+        y_test = np.hstack(test_labels_list)
+
+        test_predictions = best_rf_model.predict_proba(X_test)
+        test_loss = log_loss(y_test, test_predictions)
+        test_accuracy = accuracy_score(y_test, best_rf_model.predict(X_test))
+
+        print("\nFinal Test Metrics Random Forest Multi Modal:")
+        print(f"  Loss: {test_loss:.4f}")
+        print(f"  Accuracy: {test_accuracy:.4f}")
+
     
     print("Training complete!")
 

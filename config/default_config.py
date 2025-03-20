@@ -6,7 +6,8 @@ DEFAULT_CONFIG = {
         "num_workers": 0,
         "use_masking": False,
         # "sample_data": True,
-        # "sample_size": 100
+        # "sample_size": 100, 
+        "augment_training_set": False,
     },
     "training": {
         "num_epochs": 10,
@@ -19,7 +20,7 @@ DEFAULT_CONFIG = {
         "dropout_rate": 0.5, 
         "multi_modal_size": 130,
         "feature_scaling": True,
-        "multi_modal_model": "MLP",
+        "multi_modal_model": "RF", #or 'MLP' or 'DT'
         "train_cnn": False,
         "train_multi_modal_model": True,
     },

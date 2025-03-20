@@ -1,5 +1,5 @@
 from models.cnn import SimpleCNN, EnhancedCNN
-from models.multi_modal_mlp import MultiModalMLP
+from models.multi_modal_models import MultiModalMLP, DecisionTreeWrapper, RandomForestWrapper
 from models.transferlearning import ResNetTransferLearning, EfficientNetTransferLearning, DenseNetTransferLearning
 
 
@@ -29,5 +29,9 @@ def get_model(model_type, num_classes, multi_modal_size):
         return DenseNetTransferLearning(num_classes, multi_modal_size)
     elif model_type == "MLP":
         return MultiModalMLP(input_size=multi_modal_size, num_classes=num_classes)
+    elif model_type == "DT":
+        return DecisionTreeWrapper(input_size=multi_modal_size, num_classes=num_classes)
+    elif model_type == "RF":
+        return RandomForestWrapper(input_size=multi_modal_size, num_classes=num_classes)
     else:
         raise ValueError(f"Unknown model type: {model_type}")
