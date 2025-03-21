@@ -1,1 +1,23 @@
-﻿/data/raw
+﻿# Ignore Python cache files
+__pycache__/
+*.py[cod]
+*.so
+*.pyo
+
+# Ignore logs and temp files
+*.log
+*.out
+*.tmp
+*.swp
+.DS_Store
+
+# Ignore Virtual Environment
+venv/
+.env
+
+# Ignore PyCharm and VSCode specific files
+.idea/
+.vscode/
+
+# Ignore any system-specific files
+Thumbs.db
