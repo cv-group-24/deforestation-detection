@@ -3,7 +3,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 from torch.utils.data import Dataset
-from data.transforms import get_transforms
+from data.transforms import get_transforms, valid_crop
 
 import pickle
 import matplotlib.pyplot as plt
@@ -80,6 +80,7 @@ class ForestNetDataset(Dataset):
 
             # Convert PIL image to numpy array before augmentation
             image_np = np.array(image)
+            image_aug = np.array(image)
 
             # Apply augmentation transformations if in training mode
             if self.is_training:
@@ -88,21 +89,22 @@ class ForestNetDataset(Dataset):
                     # plt.imshow(image_np)
                     # plt.show()
 
-                    if image_np.ndim == 3:  # Shape (H, W, C)
-                        image_np = np.expand_dims(image_np, axis=0)  # Make it (1, H, W, C)
+                    if image_aug.ndim == 3:  # Shape (H, W, C)
+                        image_aug = np.expand_dims(image_aug, axis=0)  # Make it (1, H, W, C)
 
-                    augmented = augmentation(images=image_np)
+                    augmented = augmentation(images=image_aug)
                     if isinstance(augmented, dict):
-                        image_np = augmented['images'][0]
+                        image_aug = augmented['images'][0]
                     elif isinstance(augmented, list):
-                        image_np = augmented[0]
+                        image_aug = augmented[0]
                     elif isinstance(augmented, np.ndarray):
-                        image_np = augmented
+                        image_aug = augmented
 
-                    if image_np.ndim == 4:
-                        image_np = image_np.squeeze(axis=0)
+                    if image_aug.ndim == 4:
+                        image_aug = image_aug.squeeze(axis=0)
 
-
+                if self.use_masks and valid_crop(image_aug, image_np):
+                    image_np = image_aug
 
             # Convert back to PIL image after augmentation if needed
             if self.transform:

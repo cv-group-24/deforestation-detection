@@ -133,24 +133,29 @@ def get_transforms(resize, spatial_augmentation, pixel_augmentation, is_training
 
     return transforms
 
-
-def valid_crop(crop, mask_bool):
+def valid_crop(crop_np, mask_bool):
     """
     Check if the cropped region contains any non-masked (valid) pixels.
 
     Args:
-        crop (PIL.Image): The cropped image.
-        mask_bool (np.array): The boolean mask array (True for valid pixels, False for masked).
+        crop_np (np.array): The cropped image (H, W, C).
+        mask_bool (np.array): The boolean mask array (H, W) or (H, W, C).
 
     Returns:
-        bool: True if the crop contains non-masked pixels, False if the crop is entirely black.
+        bool: True if the crop contains non-masked pixels, False otherwise.
     """
-    crop_np = np.array(crop)
     crop_height, crop_width = crop_np.shape[:2]
 
-    # Check if the crop contains any valid (non-masked) pixels (not black)
-    crop_mask = crop_np.sum(axis=-1) > 0  # Non-black pixels in the crop
+    # Convert to grayscale-like mask (collapse across channels if needed)
+    if mask_bool.ndim == 3:
+        mask_bool = np.any(mask_bool, axis=-1)  # Reduce to (H, W)
+
+    # Check for non-black pixels in the crop
+    crop_mask = np.any(crop_np > 0, axis=-1)  # Reduce to (H, W)
+
+    # Ensure mask_bool is correctly indexed to the crop's size
     valid_pixels = np.sum(crop_mask & mask_bool[:crop_height, :crop_width])
 
     return valid_pixels > 0
+
 

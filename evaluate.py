@@ -67,7 +67,7 @@ def performance_metrics():
     # Print classification report
     class_report = test_metrics["classification_report"]
 
-    with open("outputs/classification_report.txt", "w") as f:
+    with open("outputs/classification_report_yaren.txt", "w") as f:
         f.write("Test Metrics:\n")
         f.write(f"  Loss: {test_metrics['loss']:.4f}\n")
         f.write(f"  Accuracy: {test_metrics['accuracy']:.4f}\n")
@@ -200,7 +200,7 @@ def metamorphic_testing():
 #     plt.title('Ratio of Same Predictions for Each Class')
 #     plt.xticks(rotation=45)
 #     plt.tight_layout()
-#     plt.savefig("outputs/metamorphic_testing.png")
+#     plt.savefig("outputs/metamorphic_testing_yaren.png")
 
 def compare_predictions(model, test_loader, metamorphic_test_loader, device, index_to_label):
     """
@@ -318,7 +318,7 @@ def compare_predictions(model, test_loader, metamorphic_test_loader, device, ind
 
     # Adjust layout to make room for the legend
     plt.tight_layout()
-    plt.savefig("outputs/metamorphic_testing.png")
+    plt.savefig("outputs/metamorphic_testing_yaren.png")
 
 
 
