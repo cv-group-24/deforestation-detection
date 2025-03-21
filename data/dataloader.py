@@ -61,17 +61,18 @@ def create_data_loaders(config):
         use_masks=config["data"]["use_masking"]
     )
 
-    train_dataset_augmented = ForestNetDataset(
-        train_df_augment, dataset_path, transform=transform,
-        spatial_augmentation=config["transforms"]["spatial_augmentation"],
-        pixel_augmentation=config["transforms"]["pixel_augmentation"],
-        resize=config["transforms"]["resize"],
-        is_training=True,
-        label_map=label_to_index,
-        use_masks=config["data"]["use_masking"]
-    )
+    if config["data"]["use_augmentation"]:
+        train_dataset_augmented = ForestNetDataset(
+            train_df_augment, dataset_path, transform=transform,
+            spatial_augmentation=config["transforms"]["spatial_augmentation"],
+            pixel_augmentation=config["transforms"]["pixel_augmentation"],
+            resize=config["transforms"]["resize"],
+            is_training=True,
+            label_map=label_to_index,
+            use_masks=config["data"]["use_masking"]
+        )
 
-    combined_train_dataset = ConcatDataset([train_dataset, train_dataset_augmented])
+        combined_train_dataset = ConcatDataset([train_dataset, train_dataset_augmented])
     
     val_dataset = ForestNetDataset(
         val_df, dataset_path, transform=transform,
@@ -86,12 +87,20 @@ def create_data_loaders(config):
     )
     
     # Create dataloaders
-    train_loader = DataLoader(
-        combined_train_dataset,
-        batch_size=config["data"]["batch_size"], 
-        shuffle=True, 
-        num_workers=config["data"]["num_workers"]
-    )
+    if config["data"]["use_augmentation"]:
+        train_loader = DataLoader(
+            combined_train_dataset,
+            batch_size=config["data"]["batch_size"],
+            shuffle=True,
+            num_workers=config["data"]["num_workers"]
+        )
+    else:
+        train_loader = DataLoader(
+            train_dataset,
+            batch_size=config["data"]["batch_size"],
+            shuffle=True,
+            num_workers=config["data"]["num_workers"]
+        )
     
     val_loader = DataLoader(
         val_dataset, 
