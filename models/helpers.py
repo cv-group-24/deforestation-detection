@@ -1,5 +1,6 @@
 from models.cnn import SimpleCNN, EnhancedCNN
 from models.transferlearning import ResNetTransferLearning, EfficientNetTransferLearning, DenseNetTransferLearning
+from models.semanticseg import UNet
 
 
 def get_model(model_type, num_classes):
@@ -26,5 +27,7 @@ def get_model(model_type, num_classes):
         return EfficientNetTransferLearning(num_classes)
     elif model_type == "DenseNetTransferLearning":
         return DenseNetTransferLearning(num_classes)
+    elif model_type == "UNet":
+        return UNet(n_channels=3, n_classes=num_classes)
     else:
         raise ValueError(f"Unknown model type: {model_type}")

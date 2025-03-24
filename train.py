@@ -85,6 +85,16 @@ def main():
             
             optimizer.zero_grad()
             outputs = model(images)
+
+            # Resize labels to match output dimensions
+            if labels.shape[-2:] != outputs.shape[-2:]:
+                labels = torch.nn.functional.interpolate(
+                    labels.float().unsqueeze(1), 
+                    size=outputs.shape[-2:],
+                    mode='nearest'
+                ).squeeze(1).long()
+                print(f"Resized labels shape: {labels.shape}")
+
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
@@ -107,7 +117,7 @@ def main():
         print(f"  Training Loss: {epoch_loss:.4f}")
         print(f"  Validation Loss: {val_metrics['loss']:.4f}")
         print(f"  Test Loss: {test_metrics['loss']:.4f}")
-        print(f"  Validation Accuracy: {val_metrics['accuracy']:.4f}")
+        # print(f"  Validation Accuracy: {val_metrics['accuracy']:.4f}")
 
         # # Plot training history
         # plot_losses(training_losses, validation_losses, test_losses)
@@ -147,11 +157,11 @@ def main():
         model.load_state_dict(best_model_state)
         print("Loaded best model based on validation loss")
     
-    # Final evaluation on test set
-    test_metrics = evaluate_model(model, test_loader, criterion, device)
-    print("\nFinal Test Metrics:")
-    print(f"  Loss: {test_metrics['loss']:.4f}")
-    print(f"  Accuracy: {test_metrics['accuracy']:.4f}")
+    # # Final evaluation on test set
+    # test_metrics = evaluate_model(model, test_loader, criterion, device)
+    # print("\nFinal Test Metrics:")
+    # print(f"  Loss: {test_metrics['loss']:.4f}")
+    # print(f"  Accuracy: {test_metrics['accuracy']:.4f}")
     
     # Plot training history
     plot_losses(training_losses, validation_losses, test_losses)
