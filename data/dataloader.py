@@ -2,7 +2,7 @@ from torch.utils.data import DataLoader, ConcatDataset
 import pandas as pd
 import os
 
-from data.dataset import ForestNetDataset
+from data.dataset import ForestNetDataset, ForestNetSegmentationDataset
 from torchvision import transforms
 from data.transforms import get_transforms
 
@@ -55,11 +55,17 @@ def create_data_loaders(config):
     ])
     
     # Create datasets
-    train_dataset = ForestNetDataset(
-        train_df, dataset_path, transform=transform,
-        is_training=False, label_map=label_to_index,
-        use_masks=config["data"]["use_masking"]
-    )
+    if config["model"]["problem_type"] == "classification":
+        train_dataset = ForestNetDataset(
+            train_df, dataset_path, transform=transform,
+            is_training=False, label_map=label_to_index,
+            use_masks=config["data"]["use_masking"]
+        )
+    elif config["model"]["problem_type"] == "semantic_segmentation":
+        train_dataset = ForestNetSegmentationDataset(
+            train_df, dataset_path, transform=transform,
+            is_training=False, label_map=label_to_index
+        )
 
     if config["data"]["use_augmentation"]:
         train_dataset_augmented = ForestNetDataset(
@@ -74,17 +80,29 @@ def create_data_loaders(config):
 
         combined_train_dataset = ConcatDataset([train_dataset, train_dataset_augmented])
     
-    val_dataset = ForestNetDataset(
-        val_df, dataset_path, transform=transform,
-        is_training=False, label_map=label_to_index,
-        use_masks=config["data"]["use_masking"]
-    )
+    if config["model"]["problem_type"] == "classification":
+        val_dataset = ForestNetDataset(
+            val_df, dataset_path, transform=transform,
+            is_training=False, label_map=label_to_index,
+            use_masks=config["data"]["use_masking"]
+        )
+    elif config["model"]["problem_type"] == "semantic_segmentation":
+        val_dataset = ForestNetSegmentationDataset(
+            val_df, dataset_path, transform=transform,
+            is_training=False, label_map=label_to_index
+        )
     
-    test_dataset = ForestNetDataset(
-        test_df, dataset_path, transform=transform,
-        is_training=False, label_map=label_to_index,
-        use_masks=config["data"]["use_masking"]
-    )
+    if config["model"]["problem_type"] == "classification":
+        test_dataset = ForestNetDataset(
+            test_df, dataset_path, transform=transform,
+            is_training=False, label_map=label_to_index,
+            use_masks=config["data"]["use_masking"]
+        )
+    elif config["model"]["problem_type"] == "semantic_segmentation":
+        test_dataset = ForestNetSegmentationDataset(
+            test_df, dataset_path, transform=transform,
+            is_training=False, label_map=label_to_index
+        )
     
     # Create dataloaders
     if config["data"]["use_augmentation"]:

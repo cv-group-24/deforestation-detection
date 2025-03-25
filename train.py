@@ -12,7 +12,7 @@ from data.dataloader import create_data_loaders
 from models.helpers import get_model
 
 from utils.helpers import set_seed, get_device, save_checkpoint
-from utils.metrics import evaluate_model
+from utils.metrics import evaluate_classification_model, evaluate_semantic_segmentation_model
 from utils.visualization import plot_losses
 
 def parse_args():
@@ -79,23 +79,23 @@ def main():
         # Training phase
         model.train()
         running_loss = 0.0
-        for images, labels in train_loader:
+        for images, ground_truth in train_loader:
             images = images.to(device)
-            labels = labels.to(device)
+            ground_truth = ground_truth.to(device)
             
             optimizer.zero_grad()
             outputs = model(images)
 
-            # Resize labels to match output dimensions
-            if labels.shape[-2:] != outputs.shape[-2:]:
-                labels = torch.nn.functional.interpolate(
-                    labels.float().unsqueeze(1), 
-                    size=outputs.shape[-2:],
-                    mode='nearest'
-                ).squeeze(1).long()
-                print(f"Resized labels shape: {labels.shape}")
+            # Resize mask to match output dimensions
+            if config["model"]["type"] == "UNet":
+                if ground_truth.shape[-2:] != outputs.shape[-2:]:
+                    ground_truth = torch.nn.functional.interpolate(
+                        ground_truth.float().unsqueeze(1), 
+                        size=outputs.shape[-2:],
+                        mode='nearest'
+                    ).squeeze(1).long()
 
-            loss = criterion(outputs, labels)
+            loss = criterion(outputs, ground_truth)
             loss.backward()
             optimizer.step()
             
@@ -105,22 +105,31 @@ def main():
         training_losses.append(epoch_loss)
         
         # Validation phase
-        val_metrics = evaluate_model(model, val_loader, criterion, device)
-        validation_losses.append(val_metrics["loss"])
+        if config["model"]["problem_type"] == "classification":
+            val_metrics = evaluate_classification_model(model, val_loader, criterion, device)
+            validation_losses.append(val_metrics["loss"])
+        elif config["model"]["problem_type"] == "semantic_segmentation":
+            val_metrics = evaluate_semantic_segmentation_model(model, val_loader, criterion, device)
+            validation_losses.append(val_metrics["loss"])
         
         # Test phase (optional during training)
-        test_metrics = evaluate_model(model, test_loader, criterion, device)
-        test_losses.append(test_metrics["loss"])
+        if config["model"]["problem_type"] == "classification":
+            test_metrics = evaluate_classification_model(model, test_loader, criterion, device)
+            test_losses.append(test_metrics["loss"])
+        elif config["model"]["problem_type"] == "semantic_segmentation":
+            test_metrics = evaluate_semantic_segmentation_model(model, test_loader, criterion, device)
+            test_losses.append(test_metrics["loss"])
         
         # Print epoch stats
         print(f"Epoch {epoch+1}/{num_epochs}:")
         print(f"  Training Loss: {epoch_loss:.4f}")
         print(f"  Validation Loss: {val_metrics['loss']:.4f}")
         print(f"  Test Loss: {test_metrics['loss']:.4f}")
-        # print(f"  Validation Accuracy: {val_metrics['accuracy']:.4f}")
+        print(f"  Validation Accuracy: {val_metrics['accuracy']:.4f}") if config["model"]["problem_type"] == "classification" else None
+        print(f"  Validation Mean IoU: {val_metrics['mean_iou']:.4f}") if config["model"]["problem_type"] == "semantic_segmentation" else None
 
         # # Plot training history
-        # plot_losses(training_losses, validation_losses, test_losses)
+        plot_losses(training_losses, validation_losses, test_losses)
         
         # Early stopping check
         if val_metrics["loss"] < best_val_loss:
@@ -157,11 +166,17 @@ def main():
         model.load_state_dict(best_model_state)
         print("Loaded best model based on validation loss")
     
-    # # Final evaluation on test set
-    # test_metrics = evaluate_model(model, test_loader, criterion, device)
-    # print("\nFinal Test Metrics:")
-    # print(f"  Loss: {test_metrics['loss']:.4f}")
-    # print(f"  Accuracy: {test_metrics['accuracy']:.4f}")
+    # Final evaluation on test set
+    if config["model"]["problem_type"] == "classification":
+        test_metrics = evaluate_classification_model(model, test_loader, criterion, device)
+        print("\nFinal Test Metrics:")
+        print(f"  Loss: {test_metrics['loss']:.4f}")
+        print(f"  Accuracy: {test_metrics['accuracy']:.4f}")
+    elif config["model"]["problem_type"] == "semantic_segmentation":
+        test_metrics = evaluate_semantic_segmentation_model(model, test_loader, criterion, device)
+        print("\nFinal Test Metrics:")
+        print(f"  Loss: {test_metrics['loss']:.4f}")
+        print(f"  Mean IoU: {test_metrics['mean_iou']:.4f}")
     
     # Plot training history
     plot_losses(training_losses, validation_losses, test_losses)
