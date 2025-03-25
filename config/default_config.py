@@ -5,7 +5,7 @@ DEFAULT_CONFIG = {
         "batch_size": 32,
         "num_workers": 0,
         "use_masking": False,
-        "use_augmentation": True,
+        "use_augmentation": False,
         # "sample_data": True,
         # "sample_size": 100
     },
@@ -17,6 +17,7 @@ DEFAULT_CONFIG = {
     },
     "model": {
         "type": "UNet",  # or "SimpleCNN"
+        "problem_type": "semantic_segmentation",  # or "classification"
         "dropout_rate": 0.5
     },
     "transforms": {
