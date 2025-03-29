@@ -124,7 +124,7 @@ def main():
             # Save best model
             save_checkpoint(
                 model, optimizer, epoch, best_val_loss,
-                os.path.join("outputs", "best_model_yaren.pth")
+                os.path.join("outputs", "best_model.pth")
             )
         else:
             epochs_without_improvement += 1

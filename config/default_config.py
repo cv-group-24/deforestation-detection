@@ -6,8 +6,8 @@ DEFAULT_CONFIG = {
         "num_workers": 0,
         "use_masking": False,
         "use_augmentation": False,
-        "sample_data": True,
-        "sample_size": 100
+        # "sample_data": True,
+        # "sample_size": 100
     },
     "training": {
         "num_epochs": 20,

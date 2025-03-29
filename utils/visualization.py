@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 
-def plot_losses(training_losses, validation_losses, test_losses=None, output_path='outputs/losses_yaren.png'):
+def plot_losses(training_losses, validation_losses, test_losses=None, output_path='outputs/losses.png'):
     """
     Plot training, validation, and optionally test losses.
     
@@ -28,7 +28,7 @@ def plot_losses(training_losses, validation_losses, test_losses=None, output_pat
     plt.savefig(output_path)
     # plt.show()
 
-def plot_confusion_matrix(conf_matrix, class_names, output_path='outputs/confusion_matrix_yaren.png'):
+def plot_confusion_matrix(conf_matrix, class_names, output_path='outputs/confusion_matrix.png'):
     """
     Plot confusion matrix.
     
