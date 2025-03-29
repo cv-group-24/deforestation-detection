@@ -1,13 +1,13 @@
 # Default configuration settings
 DEFAULT_CONFIG = {
     "data": {
-        "dataset_path": r"C:\Users\yaren\OneDrive\Desktop\Yaren's\TU Delft\Masters\CV\deep\downloads\ForestNetDataset",
+        "dataset_path": r"C:\Users\chris\Desktop\University\Code\ComputerVision\ForestNetDataset",
         "batch_size": 32,
         "num_workers": 0,
         "use_masking": False,
-        "use_augmentation": True,
-        # "sample_data": True,
-        # "sample_size": 100
+        "use_augmentation": False,
+        "sample_data": True,
+        "sample_size": 100
     },
     "training": {
         "num_epochs": 20,

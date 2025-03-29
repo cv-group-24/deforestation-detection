@@ -21,3 +21,7 @@ venv/
 
 # Ignore any system-specific files
 Thumbs.db
+config/__pycache__
+data/__pycache__
+models/__pycache__
+utils/__pycache__
