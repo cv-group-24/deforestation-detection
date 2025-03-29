@@ -10,13 +10,13 @@ DEFAULT_CONFIG = {
         # "sample_size": 100
     },
     "training": {
-        "num_epochs": 20,
+        "num_epochs": 10,
         "learning_rate": 1e-4,
-        "early_stopping_patience": 5,
+        "early_stopping_patience": 3,
         "seed": 42
     },
     "model": {
-        "type": "EnhancedCNN",  # or "SimpleCNN"
+        "type": "SimpleCNN",  # or "SimpleCNN"
         "dropout_rate": 0.5
     },
     "transforms": {
