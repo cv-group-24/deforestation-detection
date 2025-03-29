@@ -1,0 +1,42 @@
+Test Metrics:
+  Loss: 0.9017
+  Accuracy: 0.6123
+
+Classification Report:
+
+Class Grassland shrubland:
+  Precision: 0.9747
+  Recall: 1.0000
+  F1-Score: 0.9872
+  Support: 77.0
+
+Class Other:
+  Precision: 0.4398
+  Recall: 0.6887
+  F1-Score: 0.5368
+  Support: 106.0
+
+Class Plantation:
+  Precision: 0.8188
+  Recall: 0.4535
+  F1-Score: 0.5837
+  Support: 269.0
+
+Class Smallholder agriculture:
+  Precision: 0.5000
+  Recall: 0.6343
+  F1-Score: 0.5592
+  Support: 216.0
+
+
+Macro Average:
+  Precision: 0.6833
+  Recall: 0.6941
+  F1-Score: 0.6667
+  Support: 668.0
+
+Weighted Average:
+  Precision: 0.6735
+  Recall: 0.6123
+  F1-Score: 0.6148
+  Support: 668.0

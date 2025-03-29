@@ -4,8 +4,8 @@ DEFAULT_CONFIG = {
         "dataset_path": r"C:\Users\chris\Desktop\University\Code\ComputerVision\ForestNetDataset",
         "batch_size": 32,
         "num_workers": 0,
-        "use_masking": False,
-        "use_augmentation": False,
+        "use_masking": True,
+        "use_augmentation": True,
         # "sample_data": True,
         # "sample_size": 100
     },
@@ -16,7 +16,7 @@ DEFAULT_CONFIG = {
         "seed": 42
     },
     "model": {
-        "type": "SimpleCNN",  # or "SimpleCNN"
+        "type": "EnhancedCNN",  # or "SimpleCNN"
         "dropout_rate": 0.5
     },
     "transforms": {

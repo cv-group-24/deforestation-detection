@@ -67,7 +67,7 @@ def create_data_loaders(config):
             spatial_augmentation=config["transforms"]["spatial_augmentation"],
             pixel_augmentation=config["transforms"]["pixel_augmentation"],
             resize=config["transforms"]["resize"],
-            is_training=False,
+            is_training=True,
             label_map=label_to_index,
             use_masks=config["data"]["use_masking"]
         )
