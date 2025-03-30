@@ -16,7 +16,7 @@ DEFAULT_CONFIG = {
         "seed": 42
     },
     "model": {
-        "type": "EnhancedCNN",  # or "SimpleCNN"
+        "type": "SimpleCNN",  # or "SimpleCNN"
         "dropout_rate": 0.5
     },
     "transforms": {
