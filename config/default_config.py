@@ -9,13 +9,13 @@ DEFAULT_CONFIG = {
         # "sample_size": 100
     },
     "training": {
-        "num_epochs": 20,
+        "num_epochs": 10,
         "learning_rate": 1e-4,
-        "early_stopping_patience": 5,
+        "early_stopping_patience": 3,
         "seed": 42
     },
     "model": {
-        "type": "EnhancedCNN",  # or "SimpleCNN"
+        "type": "EnhancedCNN",  # or "SimpleCNN" or "ResNetTransferLearning"
         "dropout_rate": 0.5
     },
     "transforms": {
@@ -24,7 +24,7 @@ DEFAULT_CONFIG = {
         "pixel_augmentation": "all" ## or 'all'
     },
     "testing": {
-        "is_testing": True,
+        "is_testing": False,
         "resize": "small", ## or 'small'
         "spatial_augmentation": "affine", ## or 'affine'
         "pixel_augmentation": "all" ## or 'all'

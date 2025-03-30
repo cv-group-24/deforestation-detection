@@ -108,9 +108,6 @@ def main():
         print(f"  Validation Loss: {val_metrics['loss']:.4f}")
         print(f"  Test Loss: {test_metrics['loss']:.4f}")
         print(f"  Validation Accuracy: {val_metrics['accuracy']:.4f}")
-
-        # Plot training history
-        plot_losses(training_losses, validation_losses, test_losses)
         
         # Early stopping check
         if val_metrics["loss"] < best_val_loss:
@@ -153,8 +150,8 @@ def main():
     print(f"  Loss: {test_metrics['loss']:.4f}")
     print(f"  Accuracy: {test_metrics['accuracy']:.4f}")
     
-    # # Plot training history
-    # plot_losses(training_losses, validation_losses, test_losses)
+    # Plot training history
+    plot_losses(training_losses, validation_losses, test_losses)
     
     print("Training complete!")
 
