@@ -26,7 +26,7 @@ def plot_losses(training_losses, validation_losses, test_losses=None, output_pat
     plt.grid(True)
     plt.legend()
     plt.savefig(output_path)
-    plt.show()
+    # plt.show()
 
 def plot_confusion_matrix(conf_matrix, class_names, output_path='outputs/confusion_matrix.png'):
     """

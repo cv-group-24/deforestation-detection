@@ -15,7 +15,7 @@ DEFAULT_CONFIG = {
         "seed": 42
     },
     "model": {
-        "type": "EnhancedCNN",  # or "SimpleCNN" or "ResNetTransferLearning"
+        "type": "ResNetTransferLearning",
         "dropout_rate": 0.5
     },
     "transforms": {
@@ -24,7 +24,7 @@ DEFAULT_CONFIG = {
         "pixel_augmentation": "all" ## or 'all'
     },
     "testing": {
-        "is_testing": False,
+        "is_testing": True,
         "resize": "small", ## or 'small'
         "spatial_augmentation": "affine", ## or 'affine'
         "pixel_augmentation": "all" ## or 'all'
