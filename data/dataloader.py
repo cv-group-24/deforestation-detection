@@ -84,14 +84,22 @@ def create_data_loaders(config):
         is_training=False, label_map=label_to_index,
         use_masks=config["data"]["use_masking"]
     )
-    
+
     # Create dataloaders
-    train_loader = DataLoader(
-        combined_train_dataset,
-        batch_size=config["data"]["batch_size"], 
-        shuffle=True, 
-        num_workers=config["data"]["num_workers"]
-    )
+    if config["data"]["use_augmentation"]:
+        train_loader = DataLoader(
+            combined_train_dataset,
+            batch_size=config["data"]["batch_size"],
+            shuffle=True,
+            num_workers=config["data"]["num_workers"]
+        )
+    else:
+        train_loader = DataLoader(
+            train_dataset,
+            batch_size=config["data"]["batch_size"],
+            shuffle=True,
+            num_workers=config["data"]["num_workers"]
+        )
     
     val_loader = DataLoader(
         val_dataset, 

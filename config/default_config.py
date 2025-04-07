@@ -5,6 +5,7 @@ DEFAULT_CONFIG = {
         "batch_size": 32,
         "num_workers": 0,
         "use_masking": False,
+        "data_augmentation": True,
         # "sample_data": True,
         # "sample_size": 100
     },
@@ -15,7 +16,7 @@ DEFAULT_CONFIG = {
         "seed": 42
     },
     "model": {
-        "type": "ResNetTransferLearning",
+        "type": "SimpleCNN",
         "dropout_rate": 0.5
     },
     "transforms": {
@@ -24,7 +25,7 @@ DEFAULT_CONFIG = {
         "pixel_augmentation": "all" ## or 'all'
     },
     "testing": {
-        "is_testing": True,
+        "is_testing": False,
         "resize": "small", ## or 'small'
         "spatial_augmentation": "affine", ## or 'affine'
         "pixel_augmentation": "all" ## or 'all'

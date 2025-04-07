@@ -60,6 +60,11 @@ class ForestNetDataset(Dataset):
             # Debug: print the image_path to see if it looks correct
             image = Image.open(image_path).convert("RGB")
 
+            image_np = np.array(image)
+
+            plt.imshow(image_np)
+            plt.show()
+
             # Apply masking if enabled
             if self.use_masks:
                 sample_path = os.path.join(self.dataset_path, row["example_path"])
@@ -85,9 +90,6 @@ class ForestNetDataset(Dataset):
             if self.is_training:
                 for augmentation in self.augmentations:
 
-                    # plt.imshow(image_np)
-                    # plt.show()
-
                     if image_np.ndim == 3:  # Shape (H, W, C)
                         image_np = np.expand_dims(image_np, axis=0)  # Make it (1, H, W, C)
 
@@ -101,8 +103,6 @@ class ForestNetDataset(Dataset):
 
                     if image_np.ndim == 4:
                         image_np = image_np.squeeze(axis=0)
-
-
 
             # Convert back to PIL image after augmentation if needed
             if self.transform:
