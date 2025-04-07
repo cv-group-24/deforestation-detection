@@ -5,7 +5,7 @@ DEFAULT_CONFIG = {
         "batch_size": 32,
         "num_workers": 0,
         "use_masking": False,
-        "data_augmentation": True,
+        "use_augmentation": True,
         # "sample_data": True,
         # "sample_size": 100
     },
