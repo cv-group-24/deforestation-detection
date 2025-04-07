@@ -60,11 +60,6 @@ class ForestNetDataset(Dataset):
             # Debug: print the image_path to see if it looks correct
             image = Image.open(image_path).convert("RGB")
 
-            image_np = np.array(image)
-
-            plt.imshow(image_np)
-            plt.show()
-
             # Apply masking if enabled
             if self.use_masks:
                 sample_path = os.path.join(self.dataset_path, row["example_path"])
