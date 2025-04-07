@@ -323,6 +323,6 @@ def compare_predictions(model, test_loader, metamorphic_test_loader, device, ind
 
 
 if __name__ == "__main__":
-    performance_metrics()
-    # metamorphic_testing()
+    # performance_metrics()
+    metamorphic_testing()
 
