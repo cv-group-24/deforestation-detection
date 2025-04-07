@@ -1,7 +1,7 @@
 # Default configuration settings
 DEFAULT_CONFIG = {
     "data": {
-        "dataset_path": r"C:\Users\yaren\OneDrive\Desktop\Yaren's\TU Delft\Masters\CV\deep\downloads\ForestNetDataset",
+        "dataset_path": r"data\raw\ForestNetDataset",
         "batch_size": 32,
         "num_workers": 0,
         "use_masking": False,
